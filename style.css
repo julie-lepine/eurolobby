@@ -993,26 +993,7 @@ button.quick-btn {
   overflow: hidden;
   position: relative;
 }
-.country-flag-bg {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-.country-flag-bg .flag-icon--bg {
-  width: min(220px, 90%);
-  height: auto;
-  opacity: 0.18;
-  filter: blur(6px);
-  object-fit: cover;
-}
 .country-inner {
-  position: relative;
-  z-index: 1;
   padding: 20px;
   display: flex;
   align-items: center;
@@ -1020,6 +1001,8 @@ button.quick-btn {
 }
 .country-flag {
   flex-shrink: 0;
+  width: 80px;
+  min-height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1041,13 +1024,6 @@ button.quick-btn {
 .country-flag .flag-fallback {
   width: 80px;
   height: 60px;
-}
-.country-flag-bg.flag-fallback,
-.country-flag-bg .flag-fallback {
-  width: min(220px, 90%);
-  height: 120px;
-  opacity: 0.18;
-  filter: blur(6px);
 }
 .flag-icon--lg {
   width: 80px;

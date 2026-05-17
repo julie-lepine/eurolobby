@@ -36,6 +36,11 @@ export function scoreClass(n) {
   return 'zero';
 }
 
+export function getCountryByCode(code) {
+  if (!code) return null;
+  return countriesCatalog.find((c) => c.code === code) ?? null;
+}
+
 export async function loadCountries() {
   if (countriesCatalog?.length) {
     return countriesCatalog.slice(0, PERFORMANCE_COUNT);
@@ -68,7 +73,6 @@ export function getFlagUrl(code, width = 80) {
 /** Affiche un drapeau image dans un conteneur (pas d’emoji texte, évite « GB » sous Windows). */
 export function applyPerformanceFlag(el, perf, { width = 80, className = 'flag-icon' } = {}) {
   if (!el || !perf) return;
-  el.textContent = '';
   el.classList.remove('flag-fallback');
   if (perf.code) {
     const img = document.createElement('img');
@@ -77,7 +81,7 @@ export function applyPerformanceFlag(el, perf, { width = 80, className = 'flag-i
     img.src = getFlagUrl(perf.code, width);
     img.alt = '';
     img.setAttribute('aria-hidden', 'true');
-    img.loading = 'lazy';
+    img.loading = 'eager';
     img.decoding = 'async';
     img.addEventListener('error', function onFlagError() {
       if (!this.dataset.retry) {
@@ -85,11 +89,12 @@ export function applyPerformanceFlag(el, perf, { width = 80, className = 'flag-i
         this.src = `https://flagcdn.com/${code}.svg`;
         return;
       }
-      this.remove();
       el.classList.add('flag-fallback');
+      el.replaceChildren();
     });
-    el.appendChild(img);
+    el.replaceChildren(img);
   } else {
+    el.replaceChildren();
     el.classList.add('flag-fallback');
   }
 }

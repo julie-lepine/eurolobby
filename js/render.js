@@ -6,6 +6,7 @@ import {
   REVEAL_THRESHOLD,
   applyPerformanceFlag,
   flagImgHtml,
+  getCountryByCode,
 } from './utils.js';
 import {
   getCurrentPerformance,
@@ -248,17 +249,15 @@ export function renderVoteScreen(lobby, user) {
   if (lobbyName) lobbyName.textContent = lobby.name;
 
   if (perf) {
-    applyPerformanceFlag(document.getElementById('country-flag'), perf, {
+    const meta = getCountryByCode(perf.code);
+    const display = meta ? { ...perf, ...meta } : perf;
+    applyPerformanceFlag(document.getElementById('country-flag'), display, {
       width: 80,
       className: 'flag-icon flag-icon--lg',
     });
-    applyPerformanceFlag(document.getElementById('country-flag-bg'), perf, {
-      width: 200,
-      className: 'flag-icon flag-icon--bg',
-    });
-    setText('country-name', perf.country);
-    setText('artist-name', perf.artist);
-    setText('song-name', `♪ ${perf.song}`);
+    setText('country-name', display.country);
+    setText('artist-name', display.artist);
+    setText('song-name', `♪ ${display.song}`);
   }
 
   const members = getLobbyMembers(lobby);
