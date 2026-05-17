@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
-import { SCORES, formatAvg, formatScore, getCountryByCode } from './utils.js';
+import { SCORES, formatAvg, formatScore, getCountryByCode, getFlagUrl } from './utils.js';
 import { getLobbyMembers, getLobbyMemberCount, getUserPrediction } from './lobby.js';
 import {
   computeDistribution,
@@ -245,9 +245,11 @@ function drawUserCard(doc, y, data) {
 }
 
 function sectionTitle(doc, title, y) {
-  const titlePadBottom = 4;
+  const padTop = 10;
+  const titlePadBottom = 2;
   const barH = 1.5;
-  y = ensureSpace(doc, y, 22);
+  y = ensureSpace(doc, y, 20);
+  y += padTop;
 
   setDisplayFont(doc, 'bold', 13);
   doc.setTextColor(...C.bg);
@@ -255,7 +257,7 @@ function sectionTitle(doc, title, y) {
 
   y += 5 + titlePadBottom;
   drawAccentBar(doc, y, barH);
-  y += barH + 8;
+  y += barH + 4;
 
   doc.setTextColor(0, 0, 0);
   return y;
@@ -292,10 +294,66 @@ function podiumRowColor(rank) {
   return null;
 }
 
-function podiumBarColor(place) {
-  if (place === 1) return C.gold;
-  if (place === 2) return C.silver;
-  return C.bronze;
+/** Hauteurs fixes comme .podium-1/2/3 (écran Final / Résultats). */
+const PODIUM_BLOCK_H = { 1: 22, 2: 16, 3: 12 };
+const PODIUM_GRADIENT = {
+  1: { top: [255, 215, 64], bottom: [255, 152, 0] },
+  2: { top: [176, 190, 197], bottom: [120, 144, 156] },
+  3: { top: [161, 136, 127], bottom: [121, 85, 72] },
+};
+
+const flagDataUrlCache = new Map();
+
+async function loadFlagDataUrl(code, width = 80) {
+  if (!code) return null;
+  const key = `${String(code).toLowerCase()}-${width}`;
+  if (flagDataUrlCache.has(key)) return flagDataUrlCache.get(key);
+  try {
+    const res = await fetch(getFlagUrl(code, width));
+    if (!res.ok) throw new Error('flag fetch');
+    const blob = await res.blob();
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    flagDataUrlCache.set(key, dataUrl);
+    return dataUrl;
+  } catch {
+    flagDataUrlCache.set(key, null);
+    return null;
+  }
+}
+
+function lerpColor(top, bottom, t) {
+  return [
+    Math.round(top[0] + (bottom[0] - top[0]) * t),
+    Math.round(top[1] + (bottom[1] - top[1]) * t),
+    Math.round(top[2] + (bottom[2] - top[2]) * t),
+  ];
+}
+
+/** Marche podium dégradé (hauteurs fixes, comme .podium-1/2/3). */
+function drawPodiumBlock(doc, x, yTop, w, h, place) {
+  const g = PODIUM_GRADIENT[place];
+  const steps = 12;
+  const stepH = h / steps;
+  for (let i = 0; i < steps; i += 1) {
+    const t = i / (steps - 1);
+    doc.setFillColor(...lerpColor(g.top, g.bottom, t));
+    const sliceY = yTop + i * stepH;
+    const sliceH = stepH + 0.2;
+    if (i === 0) {
+      doc.roundedRect(x, sliceY, w, sliceH + 2, 2.5, 2.5, 'F');
+    } else {
+      doc.rect(x, sliceY, w, sliceH, 'F');
+    }
+  }
+
+  setDisplayFont(doc, 'bold', 16);
+  doc.setTextColor(255, 255, 255);
+  doc.text(String(place), x + w / 2, yTop + h / 2 + 1.5, { align: 'center' });
 }
 
 /** Top 3 des notes personnelles (score le plus élevé). */
@@ -317,53 +375,68 @@ function computeUserTop3(lobby, userId) {
   return picks.slice(0, 3).map((p, i) => ({ ...p, place: i + 1 }));
 }
 
-/** Hauteur de barre pour une valeur dans [-3, +3]. */
-function scoreToBarHeight(value, maxH = 28, minH = 8) {
-  const norm = Math.max(0, Math.min(1, (value + 3) / 6));
-  return minH + norm * (maxH - minH);
-}
-
 /**
- * Podium visuel (ordre Eurovision : 2e – 1er – 3e).
- * @param {Array<{ place: number, label: string, detail: string, value: number }>} items
+ * Podium visuel aligné sur l’écran Final (2e – 1er – 3e, marches à hauteurs fixes).
+ * @param {Array<{ place: number, perf?: object, label: string, detail: string }>} items
  */
-function drawPodiumVisual(doc, y, title, items) {
+async function drawPodiumVisual(doc, y, title, items) {
   if (!items.length) return y;
-  const chartH = 54;
-  y = ensureSpace(doc, y, chartH + 14);
+
+  const maxBlockH = PODIUM_BLOCK_H[1];
+  const metaAbove = 16;
+  const chartH = metaAbove + maxBlockH + 6;
+  y = ensureSpace(doc, y, chartH + 8);
   y = sectionTitle(doc, title, y);
 
   const places = [2, 1, 3];
   const colW = CONTENT_W / 3;
-  const baseLine = y + 40;
-  const barW = 26;
+  const blockW = Math.min(28, colW - 6);
+  const baseLine = y + metaAbove + maxBlockH;
+
+  const flagUrls = await Promise.all(
+    items.map((item) => (item.perf?.code ? loadFlagDataUrl(item.perf.code, 80) : null))
+  );
+  const flagByPlace = Object.fromEntries(
+    items.map((item, i) => [item.place, flagUrls[i]])
+  );
 
   places.forEach((place, col) => {
     const item = items.find((x) => x.place === place);
-    const cx = MARGIN + col * colW + colW / 2;
     if (!item) return;
 
-    const barH = scoreToBarHeight(item.value);
-    const [r, g, b] = podiumBarColor(place);
-    doc.setFillColor(r, g, b);
-    doc.roundedRect(cx - barW / 2, baseLine - barH, barW, barH, 2, 2, 'F');
+    const cx = MARGIN + col * colW + colW / 2;
+    const blockH = PODIUM_BLOCK_H[place];
+    const blockTop = baseLine - blockH;
+    const x = cx - blockW / 2;
 
-    setDisplayFont(doc, 'bold', 12);
-    doc.setTextColor(40, 40, 50);
-    doc.text(String(place), cx, baseLine - barH / 2 + 1, { align: 'center' });
+    let textY = blockTop - 3;
 
-    setBodyFont(doc, 'normal', 7);
+    const flagUrl = flagByPlace[place];
+    const flagW = 11;
+    const flagH = 8;
+    if (flagUrl) {
+      textY -= flagH + 1;
+      try {
+        doc.addImage(flagUrl, 'PNG', cx - flagW / 2, textY, flagW, flagH);
+      } catch {
+        /* ignore broken flag */
+      }
+    }
+
+    setDisplayFont(doc, 'bold', 8.5);
     doc.setTextColor(...C.bg);
-    const label = pdfText(item.label).slice(0, 14);
-    doc.text(label, cx, baseLine + 5, { align: 'center', maxWidth: colW - 6 });
+    doc.text(pdfText(item.label).slice(0, 14), cx, textY, { align: 'center' });
+    textY -= 4;
 
-    setBodyFont(doc, 'bold', 8);
-    doc.setTextColor(...C.accent2);
-    doc.text(item.detail, cx, baseLine + 10, { align: 'center' });
+    setBodyFont(doc, 'normal', 7.5);
+    doc.setTextColor(...C.muted);
+    doc.text(item.detail, cx, textY, { align: 'center' });
+
+    drawPodiumBlock(doc, x, blockTop, blockW, blockH, place);
   });
 
   doc.setTextColor(0, 0, 0);
-  return y + chartH;
+  return y + chartH + 4;
 }
 
 /** Barres horizontales — top 10 moyennes lobby. */
@@ -518,11 +591,11 @@ export async function exportLobbyPdf(lobby, user, options = {}) {
     if (data.top3.length) {
       const lobbyPodium = data.top3.map((r, i) => ({
         place: i + 1,
+        perf: r.perf,
         label: perfLabel(r.perf),
         detail: formatAvg(r.avg),
-        value: r.avg,
       }));
-      y = drawPodiumVisual(doc, y, 'Podium du lobby', lobbyPodium);
+      y = await drawPodiumVisual(doc, y, 'Podium du lobby', lobbyPodium);
     }
 
     if (data.userTop3.length) {
@@ -531,11 +604,11 @@ export async function exportLobbyPdf(lobby, user, options = {}) {
         : 'Votre podium';
       const userPodium = data.userTop3.map((r) => ({
         place: r.place,
+        perf: r.perf,
         label: perfLabel(r.perf),
         detail: formatScore(r.score),
-        value: r.score,
       }));
-      y = drawPodiumVisual(doc, y, userTitle, userPodium);
+      y = await drawPodiumVisual(doc, y, userTitle, userPodium);
     }
 
     if (data.ranking.length) {
