@@ -1,8 +1,9 @@
 import { jsPDF } from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
-import { formatAvg, formatScore, getCountryByCode } from './utils.js';
+import { SCORES, formatAvg, formatScore, getCountryByCode } from './utils.js';
 import { getLobbyMembers, getLobbyMemberCount, getUserPrediction } from './lobby.js';
 import {
+  computeDistribution,
   computeFullPerformanceRanking,
   computeLobbyStats,
   computeUserWinner,
@@ -12,6 +13,8 @@ import {
 const MARGIN = 16;
 const PAGE_W = 210;
 const CONTENT_W = PAGE_W - MARGIN * 2;
+/** Largeur colonne rang (#) — assez large pour 2 chiffres sur une ligne */
+const RANK_COL_W = 14;
 
 /** Palette alignée sur style.css (:root) */
 const C = {
@@ -192,7 +195,7 @@ function drawCoverHeader(doc, data) {
   );
 
   doc.setTextColor(0, 0, 0);
-  return headerH + 10;
+  return headerH + 20;
 }
 
 function drawInfoCard(doc, y, title, lines) {
@@ -242,14 +245,20 @@ function drawUserCard(doc, y, data) {
 }
 
 function sectionTitle(doc, title, y) {
-  y = ensureSpace(doc, y, 18);
-  drawAccentBar(doc, y, 1.5);
-  y += 5;
+  const titlePadBottom = 4;
+  const barH = 1.5;
+  y = ensureSpace(doc, y, 22);
+
   setDisplayFont(doc, 'bold', 13);
   doc.setTextColor(...C.bg);
   doc.text(title, MARGIN, y);
+
+  y += 5 + titlePadBottom;
+  drawAccentBar(doc, y, barH);
+  y += barH + 8;
+
   doc.setTextColor(0, 0, 0);
-  return y + 8;
+  return y;
 }
 
 function baseTableOpts(y) {
@@ -281,6 +290,163 @@ function podiumRowColor(rank) {
   if (rank === 2) return [242, 246, 248];
   if (rank === 3) return [248, 242, 238];
   return null;
+}
+
+function podiumBarColor(place) {
+  if (place === 1) return C.gold;
+  if (place === 2) return C.silver;
+  return C.bronze;
+}
+
+/** Top 3 des notes personnelles (score le plus élevé). */
+function computeUserTop3(lobby, userId) {
+  if (!userId || !lobby?.votes?.length) return [];
+  const perfById = Object.fromEntries((lobby.performances || []).map((p) => [p.id, p]));
+  const picks = lobby.votes
+    .filter((v) => v.userId === userId)
+    .map((v) => {
+      const perf = perfById[v.performanceId];
+      if (!perf) return null;
+      return { perf, score: v.score };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return perfLabel(a.perf).localeCompare(perfLabel(b.perf));
+    });
+  return picks.slice(0, 3).map((p, i) => ({ ...p, place: i + 1 }));
+}
+
+/** Hauteur de barre pour une valeur dans [-3, +3]. */
+function scoreToBarHeight(value, maxH = 28, minH = 8) {
+  const norm = Math.max(0, Math.min(1, (value + 3) / 6));
+  return minH + norm * (maxH - minH);
+}
+
+/**
+ * Podium visuel (ordre Eurovision : 2e – 1er – 3e).
+ * @param {Array<{ place: number, label: string, detail: string, value: number }>} items
+ */
+function drawPodiumVisual(doc, y, title, items) {
+  if (!items.length) return y;
+  const chartH = 54;
+  y = ensureSpace(doc, y, chartH + 14);
+  y = sectionTitle(doc, title, y);
+
+  const places = [2, 1, 3];
+  const colW = CONTENT_W / 3;
+  const baseLine = y + 40;
+  const barW = 26;
+
+  places.forEach((place, col) => {
+    const item = items.find((x) => x.place === place);
+    const cx = MARGIN + col * colW + colW / 2;
+    if (!item) return;
+
+    const barH = scoreToBarHeight(item.value);
+    const [r, g, b] = podiumBarColor(place);
+    doc.setFillColor(r, g, b);
+    doc.roundedRect(cx - barW / 2, baseLine - barH, barW, barH, 2, 2, 'F');
+
+    setDisplayFont(doc, 'bold', 12);
+    doc.setTextColor(40, 40, 50);
+    doc.text(String(place), cx, baseLine - barH / 2 + 1, { align: 'center' });
+
+    setBodyFont(doc, 'normal', 7);
+    doc.setTextColor(...C.bg);
+    const label = pdfText(item.label).slice(0, 14);
+    doc.text(label, cx, baseLine + 5, { align: 'center', maxWidth: colW - 6 });
+
+    setBodyFont(doc, 'bold', 8);
+    doc.setTextColor(...C.accent2);
+    doc.text(item.detail, cx, baseLine + 10, { align: 'center' });
+  });
+
+  doc.setTextColor(0, 0, 0);
+  return y + chartH;
+}
+
+/** Barres horizontales — top 10 moyennes lobby. */
+function drawTop10Chart(doc, y, ranking) {
+  const items = ranking.slice(0, 10);
+  if (!items.length) return y;
+
+  const rowH = 5.8;
+  const chartH = items.length * rowH + 6;
+  y = ensureSpace(doc, y, chartH + 14);
+  y = sectionTitle(doc, 'Top 10 — moyennes du lobby', y);
+
+  const labelW = 44;
+  const barMaxW = CONTENT_W - labelW - 16;
+  const avgs = items.map((r) => r.avg);
+  const minAvg = Math.min(...avgs);
+  const maxAvg = Math.max(...avgs);
+  const span = Math.max(0.05, maxAvg - minAvg);
+
+  items.forEach((r, i) => {
+    const rowY = y + i * rowH;
+    const ratio = 0.12 + (0.88 * (r.avg - minAvg)) / span;
+    const barW = barMaxW * ratio;
+
+    const fill = i === 0 ? C.gold : i === 1 ? C.silver : i === 2 ? C.bronze : C.accent2;
+    doc.setFillColor(...fill);
+    doc.roundedRect(MARGIN + labelW, rowY, barW, 4.2, 1, 1, 'F');
+
+    setBodyFont(doc, 'normal', 7.5);
+    doc.setTextColor(...C.bg);
+    doc.text(perfLabel(r.perf).slice(0, 16), MARGIN, rowY + 3.2);
+    doc.text(formatAvg(r.avg), MARGIN + labelW + barW + 2, rowY + 3.2);
+  });
+
+  doc.setTextColor(0, 0, 0);
+  return y + chartH + 4;
+}
+
+/** Histogramme des notes (−3 à +3) sur tous les votes. */
+function drawDistributionChart(doc, y, votes) {
+  if (!votes.length) return y;
+
+  const dist = computeDistribution(votes);
+  const chartH = 40;
+  y = ensureSpace(doc, y, chartH + 14);
+  y = sectionTitle(doc, 'Distribution des notes', y);
+
+  const scores = SCORES;
+  const maxCount = Math.max(1, ...scores.map((s) => dist[s]));
+  const gap = 2;
+  const barW = (CONTENT_W - gap * (scores.length - 1)) / scores.length;
+  const baseLine = y + 32;
+  const maxBarH = 24;
+
+  scores.forEach((score, i) => {
+    const count = dist[score];
+    const barH = Math.max(1.5, (count / maxCount) * maxBarH);
+    const x = MARGIN + i * (barW + gap);
+
+    let fill = C.muted2;
+    if (score > 0) fill = C.green;
+    else if (score < 0) fill = C.red;
+    else fill = [200, 200, 210];
+
+    doc.setFillColor(...fill);
+    doc.roundedRect(x, baseLine - barH, barW, barH, 1, 1, 'F');
+
+    setBodyFont(doc, 'normal', 7);
+    doc.setTextColor(...C.bg);
+    doc.text(formatScore(score), x + barW / 2, baseLine + 4, { align: 'center' });
+    if (count > 0) {
+      doc.setFontSize(6);
+      doc.text(String(count), x + barW / 2, baseLine - barH - 2, { align: 'center' });
+      doc.setFontSize(7);
+    }
+  });
+
+  setBodyFont(doc, 'normal', 8);
+  doc.setTextColor(...C.muted);
+  doc.text(`${votes.length} votes au total`, MARGIN, baseLine + 10);
+  doc.setTextColor(0, 0, 0);
+
+  return y + chartH + 6;
 }
 
 function addPageFooters(doc) {
@@ -320,6 +486,8 @@ export function buildLobbyReportData(lobby, user) {
     user: user ? { id: user.id, pseudo: user.pseudo, avatar: user.avatar } : null,
     userWinner: user ? computeUserWinner(lobby, user.id) : null,
     prediction: user ? getUserPrediction(lobby, user.id) : '',
+    userTop3: user ? computeUserTop3(lobby, user.id) : [],
+    allVotes: lobby.votes || [],
   };
 }
 
@@ -331,6 +499,7 @@ export function readExportOptions() {
     detailedVotes: on('export-toggle-votes', true),
     stats: on('export-toggle-stats', true),
     heatmap: on('export-toggle-heatmap', false),
+    charts: on('export-toggle-charts', true),
   };
 }
 
@@ -344,6 +513,39 @@ export async function exportLobbyPdf(lobby, user, options = {}) {
 
   y = drawWinnerHighlight(doc, y, data.winner);
   y = drawUserCard(doc, y, data);
+
+  if (options.charts) {
+    if (data.top3.length) {
+      const lobbyPodium = data.top3.map((r, i) => ({
+        place: i + 1,
+        label: perfLabel(r.perf),
+        detail: formatAvg(r.avg),
+        value: r.avg,
+      }));
+      y = drawPodiumVisual(doc, y, 'Podium du lobby', lobbyPodium);
+    }
+
+    if (data.userTop3.length) {
+      const userTitle = data.user?.pseudo
+        ? `Votre podium — ${pdfText(data.user.pseudo)}`
+        : 'Votre podium';
+      const userPodium = data.userTop3.map((r) => ({
+        place: r.place,
+        label: perfLabel(r.perf),
+        detail: formatScore(r.score),
+        value: r.score,
+      }));
+      y = drawPodiumVisual(doc, y, userTitle, userPodium);
+    }
+
+    if (data.ranking.length) {
+      y = drawTop10Chart(doc, y, data.ranking);
+    }
+
+    if (data.allVotes.length) {
+      y = drawDistributionChart(doc, y, data.allVotes);
+    }
+  }
 
   if (options.stats && data.stats) {
     y = sectionTitle(doc, 'Statistiques', y);
@@ -391,7 +593,7 @@ export async function exportLobbyPdf(lobby, user, options = {}) {
       }),
       theme: 'plain',
       columnStyles: {
-        0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
+        0: { cellWidth: RANK_COL_W, halign: 'center', fontStyle: 'bold', overflow: 'visible' },
         1: { cellWidth: 42 },
         3: { halign: 'right', fontStyle: 'bold', textColor: C.accent2 },
       },
@@ -426,7 +628,12 @@ export async function exportLobbyPdf(lobby, user, options = {}) {
         textColor: C.text,
       },
       columnStyles: {
-        0: { cellWidth: 10, halign: 'center' },
+        0: {
+          cellWidth: RANK_COL_W,
+          minCellWidth: RANK_COL_W,
+          halign: 'center',
+          overflow: 'ellipsize',
+        },
         3: { halign: 'right', fontStyle: 'bold' },
         4: { halign: 'center', textColor: C.muted },
       },
@@ -444,7 +651,7 @@ export async function exportLobbyPdf(lobby, user, options = {}) {
   if (showVotes && data.members.length && data.ranking.length) {
     y = sectionTitle(
       doc,
-      options.heatmap ? 'Heatmap des votes' : 'Votes par participant',
+      options.heatmap ? 'Grille colorée des votes' : 'Votes par participant',
       y
     );
     const head = [
@@ -473,7 +680,7 @@ export async function exportLobbyPdf(lobby, user, options = {}) {
         fontSize: 7,
       },
       columnStyles: {
-        0: { cellWidth: 8, halign: 'center' },
+        0: { cellWidth: RANK_COL_W, halign: 'center', overflow: 'visible' },
         1: { cellWidth: 28 },
       },
       didParseCell: (hook) => {
