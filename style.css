@@ -1354,6 +1354,12 @@ body {
 .vote-dist {
   margin: 0 20px 16px;
 }
+.results-actions {
+  margin-bottom: 8px;
+}
+.results-actions .btn {
+  width: 100%;
+}
 .dist-title {
   font-size: 14px;
   font-weight: 600;
