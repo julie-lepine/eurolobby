@@ -9,7 +9,9 @@ import {
   hydrateLobby,
   refreshUserLobbies,
   setLobbyCache,
+  updateLobby,
 } from './store.js';
+import { normalizeLobby } from './lobby-normalize.js';
 import { signup, login, loginAsGuest, requireAuth, restoreSession, logout } from './auth.js';
 import { subscribeToLobby, isRemoteMode } from './remote.js';
 import { isSupabaseConfigured } from './supabase.js';
@@ -69,7 +71,14 @@ async function refresh() {
   if (isUsingRemote() && user?.id) {
     await refreshUserLobbies(user.id);
   }
-  const lobby = getLobby();
+  let lobby = getLobby();
+  if (lobby) {
+    const normalized = await normalizeLobby(lobby);
+    if (normalized.performances.length !== lobby.performances.length) {
+      updateLobby(lobby.id, () => normalized);
+      lobby = normalized;
+    }
+  }
   renderAll(lobby, user);
   syncTimerFromLobby(lobby);
   syncScreenFromLobby(lobby);
@@ -83,10 +92,16 @@ function setupLobbyRealtime(lobbyId) {
   if (!isRemoteMode() || !lobbyId) return;
   unsubscribeLobby = subscribeToLobby(
     lobbyId,
-    (lobby) => {
-      setLobbyCache(lobby);
+    async (lobby) => {
+      const normalized = await normalizeLobby(lobby);
+      if (normalized.performances.length !== lobby.performances.length) {
+        updateLobby(lobby.id, () => normalized);
+        setLobbyCache(normalized);
+      } else {
+        setLobbyCache(lobby);
+      }
       const user = getCurrentUser();
-      renderAll(lobby, user);
+      renderAll(getLobby(), user);
       syncTimerFromLobby(lobby);
       syncScreenFromLobby(lobby);
     },
@@ -166,6 +181,7 @@ export function goTo(id) {
 
   target.classList.add('active');
   target.scrollTop = 0;
+  target.querySelector('.results-body')?.scrollTo(0, 0);
 
   const nav = document.getElementById('bottom-nav');
   if (nav) nav.style.display = BOTTOM_NAV_SCREENS.includes(id) ? 'flex' : 'none';

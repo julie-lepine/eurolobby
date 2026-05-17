@@ -4,6 +4,7 @@ import {
   fetchUserLobbies as remoteFetchUserLobbies,
   saveLobby as remoteSaveLobby,
 } from './remote.js';
+import { normalizeLobby } from './lobby-normalize.js';
 
 const DB_KEY = 'eurolobby_db';
 
@@ -85,8 +86,15 @@ export function getCurrentLobby() {
 
 export async function hydrateLobby(lobbyId) {
   if (!isRemoteMode() || !lobbyId) return null;
-  const lobby = await fetchLobbyById(lobbyId);
-  if (lobby) setLobbyCache(lobby);
+  let lobby = await fetchLobbyById(lobbyId);
+  if (lobby) {
+    const normalized = await normalizeLobby(lobby);
+    if (normalized.performances.length !== lobby.performances.length) {
+      lobby = normalized;
+      await remoteSaveLobby(lobby).catch((err) => console.error('normalize saveLobby', err));
+    }
+    setLobbyCache(lobby);
+  }
   return lobby;
 }
 
@@ -96,8 +104,16 @@ export async function refreshUserLobbies(userId) {
     return userLobbiesCache;
   }
   const list = await remoteFetchUserLobbies(userId);
-  userLobbiesCache = list;
-  return list;
+  const normalizedList = [];
+  for (const lobby of list) {
+    const normalized = await normalizeLobby(lobby);
+    if (normalized.performances.length !== lobby.performances.length) {
+      await remoteSaveLobby(normalized).catch((err) => console.error('normalize lobby list', err));
+    }
+    normalizedList.push(normalized);
+  }
+  userLobbiesCache = normalizedList;
+  return normalizedList;
 }
 
 export function updateLobby(lobbyId, updater) {
