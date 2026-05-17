@@ -20,7 +20,7 @@
   --font-body: "DM Sans", sans-serif;
   --r: 16px;
   --r2: 24px;
-  --bottom-nav-height: 96px;
+  --bottom-nav-height: 104px;
   --bottom-nav-safe: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
 }
 
@@ -1563,52 +1563,91 @@ button.quick-btn {
 
 /* ===== SCREEN: FINAL ===== */
 .screen.final-screen {
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-  overscroll-behavior: contain;
-  padding-bottom: var(--bottom-nav-safe);
-  scroll-padding-bottom: var(--bottom-nav-safe);
+  overflow: hidden;
   background: var(--bg);
   position: relative;
 }
 .screen.final-screen.active {
   transform: none;
   animation: none;
-  display: block;
+  display: flex;
+  flex-direction: column;
 }
 .final-content {
   position: relative;
   z-index: 2;
+  flex: 1;
+  min-height: 0;
   width: 100%;
-  flex-shrink: 0;
-  min-height: min-content;
-  padding-bottom: 24px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  scroll-padding-bottom: var(--bottom-nav-safe);
   box-sizing: border-box;
 }
-.prediction-block {
-  margin-bottom: 24px;
-  padding-top: 4px;
-  padding-bottom: 20px;
+.final-bottom-spacer {
+  flex-shrink: 0;
+  height: var(--bottom-nav-safe);
+  width: 100%;
+  pointer-events: none;
+}
+
+/* ===== SCREEN: EXPORT ===== */
+.screen.export-screen.active {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.export-body {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  padding: 56px 24px 24px;
+  box-sizing: border-box;
+}
+.export-actions-bottom {
+  margin-bottom: 8px;
+}
+.export-bottom-spacer {
+  flex-shrink: 0;
+  height: calc(32px + env(safe-area-inset-bottom, 0px));
+  width: 100%;
+  pointer-events: none;
+}
+.prediction-block,
+#prediction-block {
+  margin: 0 20px 28px;
+  padding: 24px 20px 28px;
   border-radius: var(--r2);
   background: rgba(255, 215, 64, 0.06);
   border: 1px solid rgba(255, 215, 64, 0.22);
+  box-sizing: border-box;
 }
 .prediction-title {
   font-family: var(--font-display);
   font-size: 16px;
   font-weight: 800;
-  margin-bottom: 6px;
+  margin: 0 0 10px;
 }
 .prediction-hint {
   font-size: 12px;
   color: var(--muted2);
-  margin: 0 0 12px;
+  margin: 0 0 16px;
+  line-height: 1.45;
+}
+.prediction-block .input-field {
+  margin-bottom: 4px;
 }
 .prediction-save-btn {
   width: 100%;
-  margin-top: 10px;
+  margin-top: 16px;
 }
 .final-content > .user-prediction-section:first-child,
 .final-content > .user-winner-section:first-child {
@@ -1824,10 +1863,12 @@ button.quick-btn {
 .podium-area {
   position: relative;
   z-index: 2;
-  padding: 24px 24px 12px;
-  margin-bottom: 8px;
+  padding: 16px 20px 8px;
+  margin-bottom: 0;
   text-align: center;
-  overflow-x: hidden;
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .final-title {
   font-family: var(--font-display);
@@ -1843,10 +1884,10 @@ button.quick-btn {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 8px;
-  margin: 24px 0 12px;
-  min-height: 180px;
+  gap: 6px;
+  margin: 12px 0 4px;
   max-width: 100%;
+  box-sizing: border-box;
 }
 .podium-item {
   display: flex;
@@ -1857,6 +1898,11 @@ button.quick-btn {
 .podium-flag {
   font-size: 40px;
   animation: podiumBounce 1s ease-out var(--delay, 0s) both;
+  transform-origin: center bottom;
+}
+.final-content .flag-icon--podium {
+  width: clamp(40px, 12vw, 56px);
+  height: clamp(30px, 9vw, 42px);
 }
 @keyframes podiumBounce {
   0% {
@@ -1864,7 +1910,7 @@ button.quick-btn {
     transform: translateY(-30px) scale(0.5);
   }
   60% {
-    transform: translateY(10px) scale(1.1);
+    transform: translateY(4px) scale(1.05);
   }
   80% {
     transform: translateY(-5px) scale(0.97);
@@ -1895,17 +1941,17 @@ button.quick-btn {
 }
 .podium-1 {
   background: linear-gradient(180deg, #ffd740, #ff9800);
-  height: 100px;
+  height: clamp(64px, 18vw, 88px);
   color: #fff;
 }
 .podium-2 {
   background: linear-gradient(180deg, #b0bec5, #78909c);
-  height: 72px;
+  height: clamp(48px, 14vw, 64px);
   color: #fff;
 }
 .podium-3 {
   background: linear-gradient(180deg, #a1887f, #795548);
-  height: 52px;
+  height: clamp(36px, 10vw, 48px);
   color: #fff;
 }
 

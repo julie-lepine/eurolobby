@@ -412,7 +412,7 @@
     <div class="dist-title">DISTRIBUTION DES VOTES</div>
   </div>
 
-  <div class="prediction-block page-pad" id="prediction-block" style="display:none">
+  <div class="prediction-block" id="prediction-block" style="display:none">
     <div class="prediction-title">Qui sera le vainqueur selon vous ?</div>
     <p class="prediction-hint">Saisissez votre pronostic avant le classement final.</p>
     <input type="text" class="input-field" id="prediction-input" placeholder="Ex. Suède, Italie, KAJ…" maxlength="80" autocomplete="off">
@@ -538,12 +538,13 @@
     </div>
   </div>
 
+  <div class="final-bottom-spacer" aria-hidden="true"></div>
   </div>
 </div>
 
 <!-- SCREEN: EXPORT -->
-<div class="screen" id="screen-export">
-  <div style="padding:56px 24px 40px">
+<div class="screen export-screen" id="screen-export">
+  <div class="export-body">
     <button class="back-btn" onclick="goTo('screen-final')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
       Résultats
@@ -604,9 +605,10 @@
     <div class="mt-24">
       <button class="btn btn-primary" onclick="exportPdf()">📥 Générer le PDF</button>
     </div>
-    <div class="mt-16">
+    <div class="mt-16 export-actions-bottom">
       <button class="btn btn-secondary" onclick="shareResults()">🔗 Partager les résultats</button>
     </div>
+    <div class="export-bottom-spacer" aria-hidden="true"></div>
   </div>
 </div>
 
