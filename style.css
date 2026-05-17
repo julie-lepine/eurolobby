@@ -1494,23 +1494,42 @@ button.quick-btn {
 }
 
 /* ===== SCREEN: FINAL ===== */
-.final-screen {
+.screen.final-screen {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  height: 100%;
+  max-height: 100dvh;
   background: var(--bg);
   position: relative;
 }
+.screen.final-screen.active {
+  transform: none;
+  animation: none;
+}
+.final-header {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
 .final-body {
-  flex: 1;
+  flex: 1 1 0;
   min-height: 0;
+  height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   overscroll-behavior: contain;
-  padding-bottom: 100px;
+  padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
   position: relative;
   z-index: 2;
+}
+.final-body .section-header {
+  padding-top: 8px;
+}
+.final-body .ranking-list {
+  padding-bottom: 8px;
 }
 
 .confetti-area {

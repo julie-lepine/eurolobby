@@ -462,11 +462,15 @@ export async function toggleReady() {
     return;
   }
   const next = !lobby.ready[user.id];
-  setReady(next);
+  const ok = await setReady(next);
+  if (!ok) {
+    showToast('Lobby introuvable.');
+    return;
+  }
   showToast(next ? 'Tu es prêt !' : 'Prêt annulé');
 }
 
-export function adminStart() {
+export async function adminStart() {
   const lobby = getLobby();
   const user = getCurrentUser();
   if (!isAdmin(lobby, user?.id)) return showToast('Réservé à l\'admin');
@@ -476,25 +480,34 @@ export function adminStart() {
   if (readyCount < members.length) {
     return showToast(`Encore ${members.length - readyCount} joueur(s) pas prêt(s)`);
   }
-  startPerformance();
+  if (!(await startPerformance())) {
+    showToast('Impossible de démarrer — recharge le lobby.');
+    return;
+  }
   showToast('C\'est parti ! Bonne soirée Eurovision 🎤');
   goTo('screen-vote');
 }
 
-export function adminStop() {
+export async function adminStop() {
   const lobby = getLobby();
   const user = getCurrentUser();
   if (!isAdmin(lobby, user?.id)) return;
-  stopTimer();
+  if (!(await stopTimer())) {
+    showToast('Lobby introuvable.');
+    return;
+  }
   showToast('Timer stoppé');
-  refresh();
 }
 
-export function adminNext() {
+export async function adminNext() {
   const lobby = getLobby();
   const user = getCurrentUser();
   if (!isAdmin(lobby, user?.id)) return;
-  const updated = nextPerformance();
+  const updated = await nextPerformance();
+  if (!updated) {
+    showToast('Lobby introuvable.');
+    return;
+  }
   if (updated?.status === 'finished') {
     showToast('Soirée terminée !');
     goTo('screen-final');
@@ -517,17 +530,20 @@ export async function adminReset() {
     cancelText: 'Annuler',
   });
   if (!confirmed) return;
-  resetLobby();
+  if (!(await resetLobby())) {
+    showToast('Lobby introuvable.');
+    return;
+  }
   lastVotePerfId = null;
   showToast('Session réinitialisée');
   goTo('screen-waiting');
 }
 
-export function resultsNext() {
+export async function resultsNext() {
   const lobby = getLobby();
   const user = getCurrentUser();
   if (isAdmin(lobby, user?.id)) {
-    adminNext();
+    await adminNext();
   } else {
     goTo('screen-vote');
   }
@@ -566,8 +582,8 @@ export async function castVote(el, val) {
   showToast('Vote enregistré');
 }
 
-export function showReveal() {
-  setRevealed();
+export async function showReveal() {
+  await setRevealed();
   document.getElementById('reveal-overlay')?.classList.add('active');
   renderReveal(getLobby());
 }
@@ -602,11 +618,11 @@ function startTimerLoop() {
 
     if (lobby.dramaticReveal && secs <= REVEAL_THRESHOLD && secs > 0 && !lobby.revealed && !revealTriggered) {
       revealTriggered = true;
-      showReveal();
+      void showReveal();
     }
 
     if (secs === 0 && lobby.timerEndsAt) {
-      if (!lobby.revealed) showReveal();
+      if (!lobby.revealed) void showReveal();
       stopVoteTimer();
     }
   }, 250);
@@ -655,11 +671,15 @@ export async function copyInviteCode() {
   }
 }
 
-export function sendChat() {
+export async function sendChat() {
   const input = document.getElementById('chat-input');
   const text = input?.value;
   if (!text?.trim()) return;
-  sendChatMessage(text);
+  const ok = await sendChatMessage(text);
+  if (!ok) {
+    showToast('Impossible d\'envoyer le message.');
+    return;
+  }
   if (input) input.value = '';
   markChatScrollForce();
 }

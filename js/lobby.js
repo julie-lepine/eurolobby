@@ -26,6 +26,15 @@ import {
 
 let countriesCache = null;
 
+async function ensureCacheForUpdate() {
+  const session = getSession();
+  if (!session?.lobbyId) return false;
+  if (isRemoteMode()) {
+    return Boolean(await ensureLobbyCache(session.lobbyId));
+  }
+  return Boolean(getCurrentLobby());
+}
+
 export async function getCountries() {
   if (!countriesCache) countriesCache = await loadCountries();
   return countriesCache;
@@ -166,19 +175,21 @@ export async function joinLobby(code) {
   return { ok: true, lobby };
 }
 
-export function setReady(isReady) {
+export async function setReady(isReady) {
   const user = getCurrentUser();
   const session = getSession();
   if (!user || !session?.lobbyId) return null;
+  if (!(await ensureCacheForUpdate())) return null;
   return updateLobby(session.lobbyId, (l) => {
     if (!l) return l;
     return { ...l, ready: { ...l.ready, [user.id]: isReady } };
   });
 }
 
-export function startPerformance() {
+export async function startPerformance() {
   const user = getCurrentUser();
   const session = getSession();
+  if (!(await ensureCacheForUpdate())) return null;
   return updateLobby(session.lobbyId, (l) => {
     if (!l || l.adminId !== user?.id) return l;
     return {
@@ -190,14 +201,16 @@ export function startPerformance() {
   });
 }
 
-export function stopTimer() {
+export async function stopTimer() {
   const session = getSession();
+  if (!(await ensureCacheForUpdate())) return null;
   return updateLobby(session.lobbyId, (l) => ({ ...l, timerEndsAt: null }));
 }
 
-export function nextPerformance() {
+export async function nextPerformance() {
   const user = getCurrentUser();
   const session = getSession();
+  if (!(await ensureCacheForUpdate())) return null;
   return updateLobby(session.lobbyId, (l) => {
     if (!l || l.adminId !== user?.id) return l;
     const next = l.currentPerformanceIndex + 1;
@@ -214,9 +227,10 @@ export function nextPerformance() {
   });
 }
 
-export function resetLobby() {
+export async function resetLobby() {
   const user = getCurrentUser();
   const session = getSession();
+  if (!(await ensureCacheForUpdate())) return null;
   return updateLobby(session.lobbyId, (l) => {
     if (!l || l.adminId !== user?.id) return l;
     return {
@@ -265,15 +279,17 @@ export async function submitVote(score) {
   return updated ? { ok: true, lobby: updated } : { ok: false, error: 'Erreur vote.' };
 }
 
-export function setRevealed() {
+export async function setRevealed() {
   const session = getSession();
+  if (!(await ensureCacheForUpdate())) return null;
   return updateLobby(session.lobbyId, (l) => (l ? { ...l, revealed: true } : l));
 }
 
-export function sendChatMessage(text) {
+export async function sendChatMessage(text) {
   const session = getSession();
   const user = getCurrentUser();
   if (!text?.trim() || !session?.lobbyId || !user) return null;
+  if (!(await ensureCacheForUpdate())) return null;
 
   return updateLobby(session.lobbyId, (l) => ({
     ...l,

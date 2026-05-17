@@ -1,5 +1,6 @@
 -- EuroLobby — schéma Supabase (Phase 3)
 -- Exécuter dans : Supabase Dashboard → SQL Editor → New query → Run
+-- Ordre : tables → colonne member_ids → migration données → index → RLS → realtime
 
 -- Profils joueurs (invités + comptes liés à Auth)
 create table if not exists public.profiles (
@@ -25,14 +26,10 @@ create table if not exists public.lobbies (
   id uuid primary key default gen_random_uuid(),
   code text not null unique,
   payload jsonb not null,
-  member_ids uuid[] not null default '{}',
   updated_at timestamptz not null default now()
 );
 
-create index if not exists lobbies_code_idx on public.lobbies (code);
-create index if not exists lobbies_member_ids_gin on public.lobbies using gin (member_ids);
-
--- Migration : colonne member_ids sur bases existantes
+-- member_ids (obligatoire avant l'index GIN ; safe si la table existait déjà)
 alter table public.lobbies add column if not exists member_ids uuid[] not null default '{}';
 
 update public.lobbies
@@ -46,6 +43,9 @@ set member_ids = coalesce(
 )
 where member_ids = '{}'::uuid[] or member_ids is null;
 
+create index if not exists lobbies_code_idx on public.lobbies (code);
+create index if not exists lobbies_member_ids_gin on public.lobbies using gin (member_ids);
+
 -- RLS
 alter table public.profiles enable row level security;
 alter table public.lobbies enable row level security;
@@ -58,7 +58,6 @@ drop policy if exists "lobbies_insert" on public.lobbies;
 drop policy if exists "lobbies_delete" on public.lobbies;
 drop policy if exists "lobbies_update" on public.lobbies;
 
--- Profils : lecture publique (affichage pseudo/avatar), écriture ouverte MVP invités
 create policy "profiles_select" on public.profiles for select using (true);
 create policy "profiles_insert" on public.profiles for insert with check (true);
 create policy "profiles_update" on public.profiles
@@ -67,17 +66,10 @@ create policy "profiles_update" on public.profiles
     and auth_user_id = auth.uid()
   );
 
--- Lobbys : lecture si membre (member_ids) ; écriture si membre
-create policy "lobbies_select" on public.lobbies
-  for select using (true);
-
+create policy "lobbies_select" on public.lobbies for select using (true);
 create policy "lobbies_insert" on public.lobbies for insert with check (true);
-
-create policy "lobbies_update" on public.lobbies
-  for update using (true);
-
-create policy "lobbies_delete" on public.lobbies
-  for delete using (true);
+create policy "lobbies_update" on public.lobbies for update using (true);
+create policy "lobbies_delete" on public.lobbies for delete using (true);
 
 -- Realtime sur les mises à jour de lobby (idempotent si déjà activé)
 do $$

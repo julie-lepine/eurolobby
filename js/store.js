@@ -120,12 +120,15 @@ export async function ensureLobbyCache(lobbyId) {
 }
 
 async function persistLobby(localLobby) {
-  const merged = await remoteSaveLobby(localLobby);
-  if (lobbyCache?.id === merged.id && lobbyCache !== merged) {
-    setLobbyCache(merged, { emit: false });
+  try {
+    const merged = await remoteSaveLobby(localLobby);
+    setLobbyCache(merged);
+    userLobbiesCache = userLobbiesCache.map((l) => (l.id === merged.id ? merged : l));
+    return merged;
+  } catch (err) {
+    console.error('persistLobby', err);
+    throw err;
   }
-  userLobbiesCache = userLobbiesCache.map((l) => (l.id === merged.id ? merged : l));
-  return merged;
 }
 
 export async function hydrateLobby(lobbyId) {
@@ -166,7 +169,7 @@ export function updateLobby(lobbyId, updater) {
     const current = lobbyCache;
     if (!current || current.id !== lobbyId) return null;
     const next = typeof updater === 'function' ? updater({ ...current }) : updater;
-    setLobbyCache(next);
+    setLobbyCache(next, { emit: false });
     persistLobby(next).catch((err) => console.error('saveLobby', err));
     return next;
   }
