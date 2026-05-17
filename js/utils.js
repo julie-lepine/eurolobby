@@ -1,5 +1,6 @@
 export const VOTE_DURATION = 180;
 export const REVEAL_THRESHOLD = 15;
+export const PERFORMANCE_COUNT = 25;
 export const SCORES = [-3, -2, -1, 0, 1, 2, 3];
 
 export function uid() {
@@ -35,7 +36,8 @@ export function scoreClass(n) {
 
 export async function loadCountries() {
   const url = `${import.meta.env.BASE_URL}data/countries-2025.json`;
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error('Impossible de charger le catalogue pays');
-  return res.json();
+  const data = await res.json();
+  return data.slice(0, PERFORMANCE_COUNT);
 }

@@ -1,11 +1,4 @@
-import { loadCountries, uid } from './utils.js';
-
-let catalogCache = null;
-
-async function getCatalog() {
-  if (!catalogCache) catalogCache = await loadCountries();
-  return catalogCache;
-}
+import { loadCountries, uid, PERFORMANCE_COUNT } from './utils.js';
 
 function catalogSignature(catalog) {
   return catalog.map((c) => c.code).join('|');
@@ -15,18 +8,18 @@ function performancesSignature(performances) {
   return (performances || []).map((p) => p.code).join('|');
 }
 
-/** Aligne un lobby sur le catalogue actuel (ex. 37 → 25 prestations). */
+/** Aligne un lobby sur le catalogue actuel (max 25 prestations Eurovision). */
 export async function normalizeLobby(lobby) {
   if (!lobby) return lobby;
 
-  const catalog = await getCatalog();
+  const catalog = await loadCountries();
   if (!catalog.length) return lobby;
 
   const current = lobby.performances || [];
-  if (
-    current.length === catalog.length &&
-    performancesSignature(current) === catalogSignature(catalog)
-  ) {
+  const catalogSig = catalogSignature(catalog);
+  const currentSig = performancesSignature(current);
+
+  if (current.length === catalog.length && current.length <= PERFORMANCE_COUNT && currentSig === catalogSig) {
     return lobby;
   }
 
@@ -64,12 +57,11 @@ export async function normalizeLobby(lobby) {
   return { ...lobby, performances, votes, currentPerformanceIndex };
 }
 
-export function lobbyWasNormalized(before, after) {
-  if (!before || !after) return false;
-  return performancesSignature(before.performances) !== performancesSignature(after.performances);
-}
-
-export async function getCatalogPerformanceCount() {
-  const catalog = await getCatalog();
-  return catalog.length;
+export function lobbyNeedsNormalization(lobby, normalized) {
+  if (!lobby || !normalized) return false;
+  const beforeLen = lobby.performances?.length ?? 0;
+  const afterLen = normalized.performances?.length ?? 0;
+  if (beforeLen !== afterLen) return true;
+  if (afterLen > PERFORMANCE_COUNT) return true;
+  return performancesSignature(lobby.performances) !== performancesSignature(normalized.performances);
 }

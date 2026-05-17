@@ -4,18 +4,23 @@ import {
   fetchUserLobbies as remoteFetchUserLobbies,
   saveLobby as remoteSaveLobby,
 } from './remote.js';
-import { normalizeLobby, lobbyWasNormalized } from './lobby-normalize.js';
+import { normalizeLobby, lobbyNeedsNormalization } from './lobby-normalize.js';
 
 /** Ramène le lobby au catalogue (25 prestations) et persiste si besoin. */
 export async function applyLobbyNormalization(lobby) {
   if (!lobby) return null;
   const normalized = await normalizeLobby(lobby);
-  if (!lobbyWasNormalized(lobby, normalized)) return lobby;
+
+  if (isRemoteMode() && lobbyCache?.id === normalized.id) {
+    setLobbyCache(normalized);
+  }
+
+  if (!lobbyNeedsNormalization(lobby, normalized)) return normalized;
 
   if (isRemoteMode()) {
-    if (lobbyCache?.id === normalized.id) setLobbyCache(normalized);
     await remoteSaveLobby(normalized).catch((err) => console.error('normalize saveLobby', err));
     userLobbiesCache = userLobbiesCache.map((l) => (l.id === normalized.id ? normalized : l));
+    setLobbyCache(normalized);
   } else {
     const db = loadDb();
     const idx = db.lobbies.findIndex((l) => l.id === normalized.id);
