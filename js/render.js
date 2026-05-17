@@ -137,22 +137,23 @@ export function renderLobbyLists(userId) {
       ? '<p class="empty-hint">Aucun historique pour l\'instant.</p>'
       : history
           .map((l) => {
-            const ranking = computePerformanceRanking(l);
+            const ranking = computeFullPerformanceRanking(l);
             const winner = ranking[0];
             const wText = winner
-              ? `${winner.perf.flag} ${winner.perf.country} · ${formatAvg(winner.avg)}`
+              ? `${winner.perf.country} · ${formatAvg(winner.avg)}`
               : '—';
             const del =
               l.adminId === userId
                 ? `<button type="button" class="lobby-delete-btn" onclick="deleteLobbyById('${l.id}', event)" title="Supprimer le lobby" aria-label="Supprimer">🗑</button>`
                 : '';
             return `<div class="lobby-card">
-              <div class="lobby-card-body">
+              <div class="lobby-card-body" onclick="enterLobbyFinal('${l.id}')" role="button" tabindex="0">
                 <div class="lobby-card-top">
                   <div class="lobby-card-name">${escapeHtml(l.name)}</div>
                   <div class="lobby-badge badge-done">✅ Terminé</div>
                 </div>
-                <div class="lobby-meta">${l.memberIds.length} membres · Vainqueur: ${wText}</div>
+                <div class="lobby-meta">${l.memberIds.length} membres · Vainqueur : ${escapeHtml(wText)}</div>
+                <div class="lobby-meta lobby-meta--action">Voir le classement final →</div>
               </div>
               ${del}
             </div>`;

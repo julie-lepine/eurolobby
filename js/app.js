@@ -170,7 +170,7 @@ function showAuthError(elId, msg) {
   el.style.display = msg ? 'block' : 'none';
 }
 
-export function handleDashAction(action) {
+export async function handleDashAction(action) {
   const lobby = getLobby();
   const user = getCurrentUser();
 
@@ -198,21 +198,29 @@ export function handleDashAction(action) {
       }
       goTo('screen-final');
       return;
-    case 'results':
-      if (!lobby) {
-        showToast('Rejoins ou crée un lobby pour voir les résultats.');
-        return;
-      }
-      if (lobby.status === 'live') {
+    case 'results': {
+      if (lobby?.status === 'live') {
         goTo('screen-results');
         return;
       }
-      if (lobby.status === 'finished') {
+      if (lobby?.status === 'finished') {
         goTo('screen-final');
         return;
       }
-      showToast('La soirée n\'a pas encore commencé.');
+      const finishedLobbies = user
+        ? getUserLobbies(user.id).filter((l) => l.status === 'finished')
+        : [];
+      if (finishedLobbies.length > 0) {
+        await enterLobbyFinal(finishedLobbies[0].id);
+        return;
+      }
+      if (lobby) {
+        showToast('La soirée n\'a pas encore commencé.');
+        return;
+      }
+      showToast('Aucun résultat — ouvre un lobby terminé dans l\'historique.');
       return;
+    }
     case 'admin':
       if (!lobby) {
         showToast('Rejoins ou crée un lobby d\'abord.');
@@ -233,7 +241,7 @@ function bindDashboardActions() {
   document.querySelectorAll('[data-dash-action]').forEach((el) => {
     el.addEventListener('click', (e) => {
       e.preventDefault();
-      handleDashAction(el.dataset.dashAction);
+      void handleDashAction(el.dataset.dashAction);
     });
   });
 }
@@ -475,6 +483,41 @@ export async function enterLobbyVote(lobbyId) {
   await hydrateLobby(lobbyId);
   setupLobbyRealtime(lobbyId);
   goTo('screen-vote');
+}
+
+/** Rouvre un lobby terminé (classement final + export). */
+export async function enterLobbyFinal(lobbyId) {
+  const user = getCurrentUser();
+  if (!user) {
+    showToast('Connecte-toi pour voir les résultats.');
+    return;
+  }
+
+  setSession({ ...getSession(), lobbyId });
+
+  let lobby = null;
+  if (isRemoteMode()) {
+    lobby = await hydrateLobby(lobbyId);
+  } else {
+    lobby = getCurrentLobby();
+  }
+
+  if (!lobby) {
+    showToast('Lobby introuvable.');
+    return;
+  }
+
+  if (lobby.status !== 'finished') {
+    if (lobby.status === 'live') {
+      await enterLobbyVote(lobbyId);
+    } else {
+      await enterLobbyWaiting(lobbyId);
+    }
+    return;
+  }
+
+  if (isRemoteMode()) setupLobbyRealtime(lobbyId);
+  goTo('screen-final');
 }
 
 export async function toggleReady() {
@@ -861,7 +904,7 @@ function bindEvents() {
 function exposeGlobals() {
   const fns = {
     goTo, navTo, selectAvatar, signupAndGo, loginAndGo, joinAsGuest,
-    createLobbyAndGo, joinLobbyAndGo, enterLobbyWaiting, enterLobbyVote,
+    createLobbyAndGo, joinLobbyAndGo, enterLobbyWaiting, enterLobbyVote, enterLobbyFinal,
     toggleReady, adminStart, adminStop, adminNext, adminReset, resultsNext,
     castVote, showReveal, hideReveal, copyInviteCode, sendChat, exportPdf, savePrediction,
     shareResults, logout: logoutUser, previewCreateCode, deleteLobbyById,
