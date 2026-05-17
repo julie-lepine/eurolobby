@@ -58,6 +58,32 @@ export function computeFullPerformanceRanking(lobby) {
     .sort((a, b) => b.avg - a.avg);
 }
 
+/** Pays préféré d’un joueur : sa note la plus haute (ex æquo → meilleure moyenne lobby). */
+export function computeUserWinner(lobby, userId) {
+  if (!userId || !lobby?.votes?.length) return null;
+
+  const perfById = Object.fromEntries((lobby.performances || []).map((p) => [p.id, p]));
+  const picks = lobby.votes
+    .filter((v) => v.userId === userId)
+    .map((v) => {
+      const perf = perfById[v.performanceId];
+      if (!perf) return null;
+      const lobbyAvg = computeAverage(getPerformanceVotes(lobby, perf.id));
+      return { perf, score: v.score, lobbyAvg, order: perf.order ?? 0 };
+    })
+    .filter(Boolean);
+
+  if (!picks.length) return null;
+
+  picks.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.lobbyAvg !== a.lobbyAvg) return b.lobbyAvg - a.lobbyAvg;
+    return a.order - b.order;
+  });
+
+  return picks[0];
+}
+
 export function computeLobbyStats(lobby, members) {
   const allVotes = lobby.votes;
   if (!allVotes.length) {

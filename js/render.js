@@ -1,4 +1,4 @@
-import {
+﻿import {
   SCORES,
   formatAvg,
   formatScore,
@@ -14,6 +14,7 @@ import {
   getRemainingSeconds,
   isVoteOpen,
   isAdmin,
+  getUserPrediction,
 } from './lobby.js';
 import { getCurrentUser, getUserLobbies } from './store.js';
 import {
@@ -24,6 +25,7 @@ import {
   computePerformanceRanking,
   computeFullPerformanceRanking,
   computeLobbyStats,
+  computeUserWinner,
 } from './vote-engine.js';
 
 let chatScrollForce = false;
@@ -54,7 +56,7 @@ export function renderAll(lobby) {
   renderVoteScreen(lobby, user);
   renderReveal(lobby, user);
   renderResults(lobby, user);
-  renderFinal(lobby);
+  renderFinal(lobby, user);
   renderAdmin(lobby, user);
 }
 
@@ -364,7 +366,20 @@ function animateCounter(el, target) {
   requestAnimationFrame(step);
 }
 
-export function renderResults(lobby) {
+function predictionMatchesCountry(predictionText, perf) {
+  if (!predictionText || !perf) return false;
+  const p = predictionText.toLowerCase().trim();
+  const country = (perf.country || '').toLowerCase();
+  const artist = (perf.artist || '').toLowerCase();
+  const code = (perf.code || '').toLowerCase();
+  return (
+    (country && (p.includes(country) || country.includes(p))) ||
+    (artist && (p.includes(artist) || artist.includes(p))) ||
+    (code && p === code)
+  );
+}
+
+export function renderResults(lobby, user) {
   if (!lobby) return;
   const perf = getCurrentPerformance(lobby);
   if (!perf) return;
@@ -411,6 +426,18 @@ export function renderResults(lobby) {
   const progress = document.getElementById('results-progress');
   const isLastPerformance =
     lobby.currentPerformanceIndex >= lobby.performances.length - 1;
+  const showPrediction = isLastPerformance || lobby.status === 'finished';
+  const predictionBlock = document.getElementById('prediction-block');
+  const predictionInput = document.getElementById('prediction-input');
+  if (predictionBlock) {
+    predictionBlock.style.display = showPrediction && user ? '' : 'none';
+  }
+  if (predictionInput && user) {
+    const saved = getUserPrediction(lobby, user.id);
+    if (document.activeElement !== predictionInput) {
+      predictionInput.value = saved;
+    }
+  }
   const nextBtn = document.getElementById('results-next-btn');
   if (nextBtn) {
     nextBtn.textContent = isLastPerformance
@@ -439,25 +466,65 @@ export function renderResults(lobby) {
   }
 }
 
-export function renderFinal(lobby) {
+export function renderFinal(lobby, user) {
   if (!lobby) return;
   const members = getLobbyMembers(lobby);
   const ranking = computeFullPerformanceRanking(lobby);
   const stats = computeLobbyStats(lobby, members);
 
-  const list = document.getElementById('final-ranking');
-  if (list) {
-    list.innerHTML = ranking
-      .map((r, i) => {
-        const rankCls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-        return `<div class="ranking-item">
-          <div class="rank-num ${rankCls}">${i + 1}</div>
-          <div class="rank-flag">${flagImgHtml(r.perf, { width: 64, className: 'flag-icon flag-icon--rank' })}</div>
-          <div class="rank-country">${escapeHtml(r.perf.country)}</div>
-          <div class="rank-score">${formatAvg(r.avg)}</div>
-        </div>`;
-      })
-      .join('');
+  const predictionText = getUserPrediction(lobby, user?.id);
+  const predictionSection = document.getElementById('user-prediction-section');
+  const predictionResultEl = document.getElementById('user-prediction-result');
+  if (predictionSection) {
+    if (predictionText) {
+      predictionSection.style.display = '';
+      setText('user-prediction-text', predictionText);
+      const lobbyTop = ranking[0];
+      if (predictionResultEl && lobbyTop) {
+        if (predictionMatchesCountry(predictionText, lobbyTop.perf)) {
+          predictionResultEl.textContent = `Bon pronostic ! Le lobby a couronn\u00e9 ${lobbyTop.perf.country}.`;
+          predictionResultEl.className = 'user-prediction-result user-prediction-result--ok';
+        } else {
+          predictionResultEl.textContent = `Le lobby a couronn\u00e9 ${lobbyTop.perf.country}.`;
+          predictionResultEl.className = 'user-prediction-result';
+        }
+      } else if (predictionResultEl) {
+        predictionResultEl.textContent = '';
+      }
+    } else {
+      predictionSection.style.display = 'none';
+    }
+  }
+
+  const userPick = computeUserWinner(lobby, user?.id);
+  const userSection = document.getElementById('user-winner-section');
+  const agreeEl = document.getElementById('user-winner-agree');
+  if (userSection) {
+    if (userPick) {
+      userSection.style.display = '';
+      const meta = getCountryByCode(userPick.perf.code);
+      const display = meta ? { ...userPick.perf, ...meta } : userPick.perf;
+      applyPerformanceFlag(document.getElementById('user-winner-flag'), display, {
+        width: 96,
+        className: 'flag-icon flag-icon--lg',
+      });
+      setText('user-winner-country', display.country);
+      setText('user-winner-artist', display.artist);
+      setText('user-winner-song', `\u266a ${display.song}`);
+      const scoreEl = document.getElementById('user-winner-your-score');
+      if (scoreEl) {
+        scoreEl.textContent = `Votre note : ${formatScore(userPick.score)}`;
+        scoreEl.className = `user-winner-your-score ${scoreClass(userPick.score)}`;
+      }
+      const lobbyTop = ranking[0];
+      if (agreeEl) {
+        agreeEl.style.display =
+          lobbyTop && lobbyTop.perf.id === userPick.perf.id ? 'block' : 'none';
+      }
+    } else {
+      userSection.style.display = 'none';
+      if (agreeEl) agreeEl.style.display = 'none';
+    }
   }
 
   setText('stat-popular', stats.popular ? `${stats.popular.member.pseudo} ${stats.popular.member.avatar}` : '—');

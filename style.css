@@ -1567,11 +1567,68 @@ button.quick-btn {
   position: relative;
   z-index: 2;
 }
+.prediction-block {
+  margin-bottom: 8px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-radius: var(--r2);
+  background: rgba(255, 215, 64, 0.06);
+  border: 1px solid rgba(255, 215, 64, 0.22);
+}
+.prediction-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.prediction-hint {
+  font-size: 12px;
+  color: var(--muted2);
+  margin: 0 0 12px;
+}
+.prediction-save-btn {
+  width: 100%;
+  margin-top: 10px;
+}
+.final-content > .user-prediction-section:first-child,
+.final-content > .user-winner-section:first-child {
+  padding-top: 56px;
+}
+.user-prediction-section {
+  position: relative;
+  z-index: 2;
+  padding: 0 24px 8px;
+  text-align: center;
+}
+.user-prediction-heading {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 12px;
+  color: var(--gold);
+}
+.user-prediction-text {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.2;
+}
+.user-prediction-result {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.user-prediction-result--ok {
+  color: var(--gold);
+  font-weight: 600;
+}
 .final-actions {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 0 20px 16px;
+  padding: 8px 20px 24px;
+  margin-top: 8px;
 }
 .final-content .section-header {
   padding-top: 8px;
@@ -1608,10 +1665,124 @@ button.quick-btn {
   }
 }
 
+.user-winner-section {
+  position: relative;
+  z-index: 2;
+  padding: 24px 24px 8px;
+  text-align: center;
+}
+.user-winner-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 8px;
+}
+.user-winner-heading {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0 0 20px;
+  background: linear-gradient(135deg, var(--gold), #fff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.user-winner-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  text-align: left;
+  margin: 0 auto;
+  max-width: 420px;
+  padding: 18px 20px;
+  border-radius: var(--r2);
+  background: linear-gradient(135deg, rgba(255, 215, 64, 0.12), rgba(224, 64, 251, 0.08));
+  border: 1px solid rgba(255, 215, 64, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+.user-winner-flag {
+  flex-shrink: 0;
+  width: 96px;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.user-winner-flag .flag-icon--lg {
+  width: 96px;
+  height: 72px;
+}
+.user-winner-details {
+  flex: 1;
+  min-width: 0;
+}
+.user-winner-country {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+.user-winner-artist {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 4px;
+}
+.user-winner-song {
+  color: var(--accent);
+  font-size: 13px;
+  font-style: italic;
+  margin-top: 6px;
+}
+.user-winner-your-score {
+  display: inline-block;
+  margin-top: 10px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+}
+.user-winner-your-score.pos {
+  color: var(--green);
+}
+.user-winner-your-score.neg {
+  color: var(--red);
+}
+.user-winner-your-score.zero {
+  color: var(--muted);
+}
+.user-winner-agree {
+  margin: 14px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold);
+}
+.user-winner-caption {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--muted2);
+}
+.final-general-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 28px 20px 0;
+  color: var(--muted2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.final-general-divider::before,
+.final-general-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border2);
+}
 .podium-area {
   position: relative;
   z-index: 2;
-  padding: 56px 24px 20px;
+  padding: 24px 24px 20px;
   text-align: center;
 }
 .final-title {

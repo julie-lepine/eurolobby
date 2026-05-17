@@ -97,6 +97,7 @@ export async function createLobby({ name, maxPlayers, isPrivate, dramaticReveal 
     status: 'waiting',
     timerEndsAt: null,
     votes: [],
+    predictions: [],
     chat: [],
     ready: { [user.id]: false },
     createdAt: Date.now(),
@@ -239,6 +240,7 @@ export async function resetLobby() {
       status: 'waiting',
       timerEndsAt: null,
       votes: [],
+      predictions: [],
       chat: [],
       ready: Object.fromEntries(l.memberIds.map((id) => [id, false])),
       revealed: false,
@@ -277,6 +279,33 @@ export async function submitVote(score) {
     return { ...l, votes };
   });
   return updated ? { ok: true, lobby: updated } : { ok: false, error: 'Erreur vote.' };
+}
+
+export function getUserPrediction(lobby, userId) {
+  if (!lobby || !userId) return '';
+  return (lobby.predictions || []).find((p) => p.userId === userId)?.text?.trim() || '';
+}
+
+export async function submitPrediction(text) {
+  const session = getSession();
+  const user = getCurrentUser();
+  if (!session?.lobbyId || !user) return { ok: false, error: 'Non connecté.' };
+
+  const trimmed = text?.trim().slice(0, 80);
+  if (!trimmed) return { ok: false, error: 'Indiquez un pays ou un artiste.' };
+
+  if (isRemoteMode()) {
+    const hydrated = await ensureLobbyCache(session.lobbyId);
+    if (!hydrated) return { ok: false, error: 'Lobby introuvable.' };
+  }
+
+  const updated = updateLobby(session.lobbyId, (l) => {
+    if (!l) return l;
+    const predictions = (l.predictions || []).filter((p) => p.userId !== user.id);
+    predictions.push({ userId: user.id, text: trimmed, updatedAt: Date.now() });
+    return { ...l, predictions };
+  });
+  return updated ? { ok: true, lobby: updated } : { ok: false, error: 'Erreur enregistrement.' };
 }
 
 export async function setRevealed() {

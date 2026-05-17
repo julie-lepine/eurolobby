@@ -17,6 +17,23 @@ export function mergeVotes(serverVotes = [], localVotes = []) {
   return Array.from(byKey.values());
 }
 
+function predictionKey(p) {
+  return p.userId;
+}
+
+export function mergePredictions(serverPredictions = [], localPredictions = []) {
+  const byKey = new Map();
+  for (const p of serverPredictions) byKey.set(predictionKey(p), p);
+  for (const p of localPredictions) {
+    const key = predictionKey(p);
+    const existing = byKey.get(key);
+    if (!existing || (p.updatedAt || 0) >= (existing.updatedAt || 0)) {
+      byKey.set(key, p);
+    }
+  }
+  return Array.from(byKey.values());
+}
+
 export function mergeChat(serverChat = [], localChat = []) {
   const byId = new Map();
   for (const m of serverChat) byId.set(m.id, m);
@@ -46,6 +63,7 @@ export function mergeLobbyPayload(server, local) {
     memberIds,
     members: mergeMembers(server.members, local.members),
     votes: mergeVotes(server.votes, local.votes),
+    predictions: mergePredictions(server.predictions, local.predictions),
     chat: mergeChat(server.chat, local.chat),
     ready: { ...server.ready, ...local.ready },
   };

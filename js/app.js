@@ -25,6 +25,7 @@ import {
   nextPerformance,
   resetLobby,
   submitVote,
+  submitPrediction,
   setRevealed,
   sendChatMessage,
   getRemainingSeconds,
@@ -538,6 +539,18 @@ export async function adminReset() {
   goTo('screen-waiting');
 }
 
+export async function savePrediction() {
+  const input = document.getElementById('prediction-input');
+  const text = input?.value ?? '';
+  const result = await submitPrediction(text);
+  if (!result.ok) {
+    showToast(result.error || 'Impossible d’enregistrer le pronostic.');
+    return;
+  }
+  showToast('Pronostic enregistré');
+  renderAll(getLobby());
+}
+
 export async function resultsNext() {
   const lobby = getLobby();
   const user = getCurrentUser();
@@ -767,6 +780,9 @@ function bindEvents() {
   document.getElementById('chat-input')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendChat();
   });
+  document.getElementById('prediction-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') savePrediction();
+  });
   document.getElementById('chat-send')?.addEventListener('click', sendChat);
 
   window.addEventListener('storage', (e) => {
@@ -797,7 +813,7 @@ function exposeGlobals() {
     goTo, navTo, selectAvatar, signupAndGo, loginAndGo, joinAsGuest,
     createLobbyAndGo, joinLobbyAndGo, enterLobbyWaiting, enterLobbyVote,
     toggleReady, adminStart, adminStop, adminNext, adminReset, resultsNext,
-    castVote, showReveal, hideReveal, copyInviteCode, sendChat, exportPdf,
+    castVote, showReveal, hideReveal, copyInviteCode, sendChat, exportPdf, savePrediction,
     shareResults, logout: logoutUser, previewCreateCode, deleteLobbyById,
   };
   Object.assign(window, fns);
