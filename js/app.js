@@ -174,6 +174,74 @@ function showAuthError(elId, msg) {
   el.style.display = msg ? 'block' : 'none';
 }
 
+export function handleDashAction(action) {
+  const lobby = getLobby();
+  const user = getCurrentUser();
+
+  switch (action) {
+    case 'create':
+      goTo('screen-create');
+      return;
+    case 'join':
+      goTo('screen-join');
+      return;
+    case 'vote':
+      if (!lobby) {
+        showToast('Rejoins ou crée un lobby pour voter.');
+        goTo('screen-join');
+        return;
+      }
+      if (lobby.status === 'live') {
+        enterLobbyVote(lobby.id);
+        return;
+      }
+      if (lobby.status === 'waiting') {
+        enterLobbyWaiting(lobby.id);
+        showToast('En attente du lancement par l\'admin.');
+        return;
+      }
+      goTo('screen-final');
+      return;
+    case 'results':
+      if (!lobby) {
+        showToast('Rejoins ou crée un lobby pour voir les résultats.');
+        return;
+      }
+      if (lobby.status === 'live') {
+        goTo('screen-results');
+        return;
+      }
+      if (lobby.status === 'finished') {
+        goTo('screen-final');
+        return;
+      }
+      showToast('La soirée n\'a pas encore commencé.');
+      return;
+    case 'admin':
+      if (!lobby) {
+        showToast('Rejoins ou crée un lobby d\'abord.');
+        return;
+      }
+      if (!isAdmin(lobby, user?.id)) {
+        showToast('Réservé à l\'admin du lobby.');
+        return;
+      }
+      goTo('screen-admin');
+      return;
+    default:
+      break;
+  }
+}
+
+function bindDashboardActions() {
+  document.querySelectorAll('[data-dash-action]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleDashAction(el.dataset.dashAction);
+    });
+  });
+}
+
 export function goTo(id) {
   document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
   const target = document.getElementById(id);
@@ -638,6 +706,7 @@ function bindConfirmModal() {
 
 function bindEvents() {
   bindConfirmModal();
+  bindDashboardActions();
   document.getElementById('chat-input')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendChat();
   });

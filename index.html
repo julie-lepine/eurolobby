@@ -165,26 +165,26 @@
       <div class="dash-live-text">🔴 Eurovision EN DIRECT</div>
       <div class="dash-live-sub" id="dash-live-sub">En attente</div>
     </div>
-    <button class="btn btn-primary" style="width:auto;padding:10px 16px;font-size:13px" id="dash-vote-btn" onclick="goTo('screen-vote')">Voter →</button>
+    <button type="button" class="btn btn-primary" style="width:auto;padding:10px 16px;font-size:13px" id="dash-vote-btn" data-dash-action="vote">Voter →</button>
   </div>
 
   <div class="quick-actions">
-    <div class="quick-btn" onclick="goTo('screen-create')">
+    <button type="button" class="quick-btn" data-dash-action="create">
       <div class="quick-btn-icon">➕</div>
       <div class="quick-btn-label">Créer</div>
-    </div>
-    <div class="quick-btn" onclick="goTo('screen-join')">
+    </button>
+    <button type="button" class="quick-btn" data-dash-action="join">
       <div class="quick-btn-icon">🔗</div>
       <div class="quick-btn-label">Rejoindre</div>
-    </div>
-    <div class="quick-btn" onclick="goTo('screen-final')">
+    </button>
+    <button type="button" class="quick-btn" data-dash-action="results">
       <div class="quick-btn-icon">🏆</div>
       <div class="quick-btn-label">Résultats</div>
-    </div>
-    <div class="quick-btn" onclick="goTo('screen-admin')">
+    </button>
+    <button type="button" class="quick-btn" data-dash-action="admin">
       <div class="quick-btn-icon">⚙️</div>
       <div class="quick-btn-label">Admin</div>
-    </div>
+    </button>
   </div>
 
   <div class="section-header">
@@ -639,6 +639,8 @@
   </div>
 </div>
 
+</div>
+
 <!-- CONFIRM MODAL -->
 <div class="confirm-modal" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title" aria-hidden="true">
   <div class="confirm-modal-backdrop" id="confirm-modal-backdrop"></div>
@@ -655,10 +657,9 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-</div>
-
 <script type="module" src="js/app.js"></script>
 </body>
 </html>
+
 
 
