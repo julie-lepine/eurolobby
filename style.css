@@ -758,6 +758,32 @@ body {
   text-align: center;
 }
 
+.waiting-actions {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.waiting-start-btn {
+  background: linear-gradient(135deg, var(--green), #00c853);
+  color: #001a0a;
+  font-weight: 700;
+  border: none;
+  width: 100%;
+}
+.waiting-start-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.waiting-start-btn--disabled,
+.waiting-start-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ready-status {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
 .waiting-invite {
   margin: 0 24px;
   padding: 16px 20px;

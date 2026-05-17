@@ -131,6 +131,8 @@ export function renderWaitingRoom(lobby, user) {
   const grid = document.getElementById('participants-grid');
   const codeEl = document.querySelector('#screen-waiting .invite-code-sm');
   const readyStatus = document.getElementById('ready-status');
+  const readyBtn = document.getElementById('waiting-ready-btn');
+  const startBtn = document.getElementById('waiting-start-btn');
 
   if (title) title.textContent = lobby.name;
   if (count) count.textContent = `${lobby.memberIds.length} / ${lobby.maxPlayers} participants connectés`;
@@ -152,10 +154,33 @@ export function renderWaitingRoom(lobby, user) {
   }
 
   const readyCount = members.filter((m) => lobby.ready[m.id]).length;
+  const allReady = members.length > 0 && readyCount === members.length;
+  const userIsAdmin = isAdmin(lobby, user?.id);
+
+  if (readyBtn && user) {
+    const isReady = !!lobby.ready[user.id];
+    readyBtn.textContent = isReady ? 'Annuler prêt' : '✅ Je suis prêt !';
+    readyBtn.classList.toggle('btn-secondary', isReady);
+    readyBtn.classList.toggle('btn-primary', !isReady);
+  }
+
+  if (startBtn) {
+    const showStart = userIsAdmin && lobby.status === 'waiting';
+    startBtn.hidden = !showStart;
+    startBtn.disabled = !allReady;
+    startBtn.classList.toggle('waiting-start-btn--disabled', showStart && !allReady);
+  }
+
   if (readyStatus) {
-    readyStatus.textContent = `${readyCount} / ${members.length} prêts · ${
-      isAdmin(lobby, user?.id) ? 'Tu es admin' : "En attente de l'admin..."
-    }`;
+    if (userIsAdmin && lobby.status === 'waiting') {
+      readyStatus.textContent = allReady
+        ? `${readyCount} / ${members.length} prêts · Lance la soirée !`
+        : `${readyCount} / ${members.length} prêts · En attente des joueurs`;
+    } else {
+      readyStatus.textContent = `${readyCount} / ${members.length} prêts · ${
+        allReady ? "L'admin va démarrer…" : 'En attente des autres joueurs'
+      }`;
+    }
   }
 
   renderChat(lobby);

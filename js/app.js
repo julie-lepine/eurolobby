@@ -10,7 +10,7 @@ import {
   refreshUserLobbies,
   setLobbyCache,
 } from './store.js';
-import { signup, login, loginAsGuest, requireAuth, initRemoteAuth, logout } from './auth.js';
+import { signup, login, loginAsGuest, requireAuth, restoreSession, logout } from './auth.js';
 import { subscribeToLobby, isRemoteMode } from './remote.js';
 import { isSupabaseConfigured } from './supabase.js';
 import {
@@ -28,6 +28,7 @@ import {
   isVoteOpen,
   isAdmin,
   getCurrentPerformance,
+  getLobbyMembers,
 } from './lobby.js';
 import { renderAll, renderReveal, renderCreatePreview } from './render.js';
 
@@ -49,6 +50,18 @@ function getLobby() {
   return getCurrentLobby();
 }
 
+function syncScreenFromLobby(lobby) {
+  if (!lobby) return;
+  const active = document.querySelector('.screen.active');
+  if (!active) return;
+  if (lobby.status === 'live' && active.id === 'screen-waiting') {
+    goTo('screen-vote');
+  }
+  if (lobby.status === 'finished' && (active.id === 'screen-vote' || active.id === 'screen-waiting')) {
+    goTo('screen-final');
+  }
+}
+
 async function refresh() {
   const user = getCurrentUser();
   if (isUsingRemote() && user?.id) {
@@ -57,6 +70,7 @@ async function refresh() {
   const lobby = getLobby();
   renderAll(lobby, user);
   syncTimerFromLobby(lobby);
+  syncScreenFromLobby(lobby);
 }
 
 function setupLobbyRealtime(lobbyId) {
@@ -70,6 +84,7 @@ function setupLobbyRealtime(lobbyId) {
     const user = getCurrentUser();
     renderAll(lobby, user);
     syncTimerFromLobby(lobby);
+    syncScreenFromLobby(lobby);
   });
 }
 
@@ -145,9 +160,12 @@ export async function signupAndGo() {
     return;
   }
   showAuthError('signup-error', '');
-  showToast(`Bienvenue ${result.user.pseudo} !`);
+  const msg = result.needsEmailConfirmation
+    ? `Compte créé ! Confirme ton email (${email}) puis connecte-toi.`
+    : `Bienvenue ${result.user.pseudo} !`;
+  showToast(msg);
   if (isUsingRemote()) await refreshUserLobbies(result.user.id);
-  goTo('screen-dashboard');
+  if (!result.needsEmailConfirmation) goTo('screen-dashboard');
 }
 
 export async function loginAndGo() {
@@ -266,8 +284,14 @@ export function adminStart() {
   const lobby = getLobby();
   const user = getCurrentUser();
   if (!isAdmin(lobby, user?.id)) return showToast('Réservé à l\'admin');
+  if (lobby?.status !== 'waiting') return showToast('La partie est déjà lancée');
+  const members = getLobbyMembers(lobby);
+  const readyCount = members.filter((m) => lobby.ready[m.id]).length;
+  if (readyCount < members.length) {
+    return showToast(`Encore ${members.length - readyCount} joueur(s) pas prêt(s)`);
+  }
   startPerformance();
-  showToast('Prestation démarrée !');
+  showToast('C\'est parti ! Bonne soirée Eurovision 🎤');
   goTo('screen-vote');
 }
 
@@ -513,21 +537,36 @@ function exposeGlobals() {
   Object.assign(window, fns);
 }
 
+function navigateAfterRestore(lobby) {
+  if (!lobby) {
+    goTo('screen-dashboard');
+    return;
+  }
+  if (lobby.status === 'live') goTo('screen-vote');
+  else if (lobby.status === 'finished') goTo('screen-final');
+  else goTo('screen-waiting');
+}
+
 async function initRemote() {
-  if (!isSupabaseConfigured) return;
-  await initRemoteAuth();
+  if (!isSupabaseConfigured) return { user: null, lobby: null };
+
+  const user = await restoreSession();
   const session = getSession();
-  const user = getCurrentUser();
+  let lobby = null;
+
   if (user?.id) {
     await refreshUserLobbies(user.id);
     if (session?.lobbyId) {
-      await hydrateLobby(session.lobbyId);
-      setupLobbyRealtime(session.lobbyId);
+      lobby = await hydrateLobby(session.lobbyId);
+      if (lobby) setupLobbyRealtime(session.lobbyId);
     }
   }
+
   if (isRemoteMode()) {
     showToast('Mode en ligne — lobbys partagés');
   }
+
+  return { user, lobby };
 }
 
 async function init() {
@@ -535,12 +574,12 @@ async function init() {
   bindEvents();
   exposeGlobals();
   previewCreateCode();
-  await initRemote();
 
-  const user = getCurrentUser();
+  const { user, lobby } = (await initRemote()) || { user: null, lobby: null };
+
   if (user) {
-    const session = getSession();
-    if (session?.lobbyId) await refresh();
+    await refresh();
+    navigateAfterRestore(lobby || getLobby());
   }
 }
 

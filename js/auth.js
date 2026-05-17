@@ -7,6 +7,7 @@ import {
   loginWithAuth,
   logoutAuth,
   restoreAuthSession,
+  getProfileById,
   mapAuthError,
 } from './remote.js';
 
@@ -21,15 +22,17 @@ export async function signup({ email, password, pseudo, avatar }) {
 
   if (isRemoteMode()) {
     try {
-      const user = await signupWithAuth({
+      const { profile, needsEmailConfirmation } = await signupWithAuth({
         email,
         password,
         pseudo: pseudo.trim(),
         avatar: avatar || '🎤',
       });
-      setUserCache(user);
-      setSession({ userId: user.id, user, lobbyId: null, isGuest: false });
-      return { ok: true, user };
+      if (!needsEmailConfirmation) {
+        setUserCache(profile);
+        setSession({ userId: profile.id, user: profile, lobbyId: null, isGuest: false });
+      }
+      return { ok: true, user: profile, needsEmailConfirmation };
     } catch (err) {
       return { ok: false, error: mapAuthError(err) };
     }
@@ -123,16 +126,40 @@ export function requireAuth() {
   return getCurrentUser();
 }
 
-export async function initRemoteAuth() {
+/** Restaure la session : Auth Supabase → profil en base → cache navigateur */
+export async function restoreSession() {
   if (!isUsingRemote()) return null;
+
+  const existing = getSession();
+  let user = null;
+
   try {
-    const user = await restoreAuthSession();
-    if (user) {
-      setUserCache(user);
-      setSession({ userId: user.id, user, lobbyId: getSession()?.lobbyId || null, isGuest: false });
-    }
-    return user;
+    user = await restoreAuthSession();
   } catch {
-    return null;
+    /* pas de session Auth */
   }
+
+  if (!user && existing?.userId) {
+    try {
+      user = await getProfileById(existing.userId);
+    } catch {
+      /* profil introuvable */
+    }
+  }
+
+  if (!user && existing?.user) {
+    user = existing.user;
+  }
+
+  if (user) {
+    setUserCache(user);
+    setSession({
+      userId: user.id,
+      user,
+      lobbyId: existing?.lobbyId || null,
+      isGuest: !!user.isGuest,
+    });
+  }
+
+  return user;
 }

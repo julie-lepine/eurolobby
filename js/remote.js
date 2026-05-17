@@ -57,6 +57,11 @@ export async function signupWithAuth({ email, password, pseudo, avatar }) {
   if (authError) throw authError;
   if (!authData.user) throw new Error('Inscription impossible.');
 
+  const existing = await getProfileByAuthId(authData.user.id);
+  if (existing) {
+    return { profile: existing, needsEmailConfirmation: !authData.session };
+  }
+
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .insert({
@@ -71,12 +76,15 @@ export async function signupWithAuth({ email, password, pseudo, avatar }) {
 
   if (profileError) {
     if (profileError.code === '23505') {
-      const existing = await getProfileByAuthId(authData.user.id);
-      if (existing) return existing;
+      const byAuth = await getProfileByAuthId(authData.user.id);
+      if (byAuth) return { profile: byAuth, needsEmailConfirmation: !authData.session };
     }
     throw profileError;
   }
-  return mapProfile(profile);
+  return {
+    profile: mapProfile(profile),
+    needsEmailConfirmation: !authData.session,
+  };
 }
 
 export async function loginWithAuth({ email, password }) {

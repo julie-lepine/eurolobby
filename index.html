@@ -282,9 +282,10 @@
     </div>
   </div>
 
-  <div style="padding:16px 20px;">
-    <button class="btn btn-primary" onclick="toggleReady()">✅ Je suis prêt !</button>
-    <div style="text-align:center;color:var(--muted);font-size:13px;margin-top:12px" id="ready-status">—</div>
+  <div class="waiting-actions">
+    <button class="btn btn-primary" id="waiting-ready-btn" type="button" onclick="toggleReady()">✅ Je suis prêt !</button>
+    <button class="btn waiting-start-btn" id="waiting-start-btn" type="button" onclick="adminStart()" hidden>▶ Commencer la soirée</button>
+    <div class="ready-status" id="ready-status">—</div>
   </div>
   <div class="spacer" style="height:40px"></div>
 </div>
