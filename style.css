@@ -1031,6 +1031,24 @@ button.quick-btn {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   background: rgba(0, 0, 0, 0.15);
 }
+.flag-fallback {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--card2), rgba(255, 255, 255, 0.08));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.country-flag.flag-fallback,
+.country-flag .flag-fallback {
+  width: 80px;
+  height: 60px;
+}
+.country-flag-bg.flag-fallback,
+.country-flag-bg .flag-fallback {
+  width: min(220px, 90%);
+  height: 120px;
+  opacity: 0.18;
+  filter: blur(6px);
+}
 .flag-icon--lg {
   width: 80px;
   height: 60px;

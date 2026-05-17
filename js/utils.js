@@ -65,38 +65,44 @@ export function getFlagUrl(code, width = 80) {
   return `https://flagcdn.com/w${width}/${String(code).toLowerCase()}.png`;
 }
 
-/** Affiche un drapeau image dans un conteneur ; emoji si chargement impossible. */
+/** Affiche un drapeau image dans un conteneur (pas d’emoji texte, évite « GB » sous Windows). */
 export function applyPerformanceFlag(el, perf, { width = 80, className = 'flag-icon' } = {}) {
   if (!el || !perf) return;
   el.textContent = '';
+  el.classList.remove('flag-fallback');
   if (perf.code) {
     const img = document.createElement('img');
+    const code = String(perf.code).toLowerCase();
     img.className = className;
     img.src = getFlagUrl(perf.code, width);
-    img.alt = perf.country || '';
+    img.alt = '';
+    img.setAttribute('aria-hidden', 'true');
     img.loading = 'lazy';
     img.decoding = 'async';
-    img.addEventListener(
-      'error',
-      () => {
-        el.textContent = perf.flag || '🏳️';
-      },
-      { once: true }
-    );
+    img.addEventListener('error', function onFlagError() {
+      if (!this.dataset.retry) {
+        this.dataset.retry = '1';
+        this.src = `https://flagcdn.com/${code}.svg`;
+        return;
+      }
+      this.remove();
+      el.classList.add('flag-fallback');
+    });
     el.appendChild(img);
   } else {
-    el.textContent = perf.flag || '🏳️';
+    el.classList.add('flag-fallback');
   }
 }
 
 /** HTML drapeau pour listes / templates. */
 export function flagImgHtml(perf, { width = 80, className = 'flag-icon' } = {}) {
-  if (!perf?.code) return perf?.flag || '🏳️';
+  if (!perf?.code) {
+    return `<span class="${className} flag-fallback" aria-hidden="true"></span>`;
+  }
+  const code = String(perf.code).toLowerCase();
   const url = getFlagUrl(perf.code, width);
-  const alt = String(perf.country || perf.code)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;');
-  const emoji = perf.flag || '🏳️';
-  return `<img class="${className}" src="${url}" alt="${alt}" width="${width}" height="${Math.round(width * 0.75)}" loading="lazy" decoding="async" onerror="this.replaceWith(document.createTextNode('${emoji}'))">`;
+  const svg = `https://flagcdn.com/${code}.svg`;
+  const w = width;
+  const h = Math.round(width * 0.75);
+  return `<img class="${className}" src="${url}" alt="" width="${w}" height="${h}" loading="lazy" decoding="async" aria-hidden="true" onerror="if(!this.dataset.retry){this.dataset.retry='1';this.src='${svg}'}else{this.replaceWith(Object.assign(document.createElement('span'),{className:'${className} flag-fallback',ariaHidden:'true'}))}">`;
 }
