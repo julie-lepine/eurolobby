@@ -11,6 +11,7 @@ import {
   setLobbyCache,
   removeLobbyFromCaches,
   refreshUserLobbies,
+  applyLobbyNormalization,
 } from './store.js';
 import {
   isRemoteMode,
@@ -21,7 +22,6 @@ import {
   deleteLobbyById,
   isCodeTaken,
 } from './remote.js';
-import { normalizeLobby } from './lobby-normalize.js';
 
 let countriesCache = null;
 
@@ -125,15 +125,7 @@ export async function joinLobby(code) {
     lobby = await fetchLobbyByCode(normalized);
     if (!lobby) return { ok: false, error: 'Code invalide. Vérifie avec ton ami.' };
 
-    const catalogLobby = await normalizeLobby(lobby);
-    if (catalogLobby.performances.length !== lobby.performances.length) {
-      lobby = catalogLobby;
-      try {
-        await saveLobby(lobby);
-      } catch (err) {
-        console.error(err);
-      }
-    }
+    lobby = await applyLobbyNormalization(lobby);
 
     if (lobby.memberIds.length >= lobby.maxPlayers) return { ok: false, error: 'Lobby complet.' };
 

@@ -4,7 +4,28 @@ import {
   fetchUserLobbies as remoteFetchUserLobbies,
   saveLobby as remoteSaveLobby,
 } from './remote.js';
-import { normalizeLobby } from './lobby-normalize.js';
+import { normalizeLobby, lobbyWasNormalized } from './lobby-normalize.js';
+
+/** Ramène le lobby au catalogue (25 prestations) et persiste si besoin. */
+export async function applyLobbyNormalization(lobby) {
+  if (!lobby) return null;
+  const normalized = await normalizeLobby(lobby);
+  if (!lobbyWasNormalized(lobby, normalized)) return lobby;
+
+  if (isRemoteMode()) {
+    if (lobbyCache?.id === normalized.id) setLobbyCache(normalized);
+    await remoteSaveLobby(normalized).catch((err) => console.error('normalize saveLobby', err));
+    userLobbiesCache = userLobbiesCache.map((l) => (l.id === normalized.id ? normalized : l));
+  } else {
+    const db = loadDb();
+    const idx = db.lobbies.findIndex((l) => l.id === normalized.id);
+    if (idx >= 0) {
+      db.lobbies[idx] = normalized;
+      saveDb(db);
+    }
+  }
+  return normalized;
+}
 
 const DB_KEY = 'eurolobby_db';
 
@@ -86,16 +107,13 @@ export function getCurrentLobby() {
 
 export async function hydrateLobby(lobbyId) {
   if (!isRemoteMode() || !lobbyId) return null;
-  let lobby = await fetchLobbyById(lobbyId);
+  const lobby = await fetchLobbyById(lobbyId);
   if (lobby) {
-    const normalized = await normalizeLobby(lobby);
-    if (normalized.performances.length !== lobby.performances.length) {
-      lobby = normalized;
-      await remoteSaveLobby(lobby).catch((err) => console.error('normalize saveLobby', err));
-    }
-    setLobbyCache(lobby);
+    const normalized = await applyLobbyNormalization(lobby);
+    setLobbyCache(normalized);
+    return normalized;
   }
-  return lobby;
+  return null;
 }
 
 export async function refreshUserLobbies(userId) {
@@ -106,11 +124,7 @@ export async function refreshUserLobbies(userId) {
   const list = await remoteFetchUserLobbies(userId);
   const normalizedList = [];
   for (const lobby of list) {
-    const normalized = await normalizeLobby(lobby);
-    if (normalized.performances.length !== lobby.performances.length) {
-      await remoteSaveLobby(normalized).catch((err) => console.error('normalize lobby list', err));
-    }
-    normalizedList.push(normalized);
+    normalizedList.push(await applyLobbyNormalization(lobby));
   }
   userLobbiesCache = normalizedList;
   return normalizedList;

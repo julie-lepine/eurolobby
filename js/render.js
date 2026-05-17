@@ -13,6 +13,7 @@ import {
   computeDistribution,
   getMinMaxVoters,
   computePerformanceRanking,
+  computeFullPerformanceRanking,
   computeLobbyStats,
 } from './vote-engine.js';
 
@@ -399,7 +400,7 @@ export function renderResults(lobby) {
 export function renderFinal(lobby) {
   if (!lobby) return;
   const members = getLobbyMembers(lobby);
-  const ranking = computePerformanceRanking(lobby);
+  const ranking = computeFullPerformanceRanking(lobby);
   const stats = computeLobbyStats(lobby, members);
 
   const list = document.getElementById('final-ranking');

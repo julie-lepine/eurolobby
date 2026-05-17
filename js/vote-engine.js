@@ -48,6 +48,16 @@ export function computePerformanceRanking(lobby) {
     .sort((a, b) => b.avg - a.avg);
 }
 
+/** Classement final : toutes les prestations, y compris sans vote (moyenne 0). */
+export function computeFullPerformanceRanking(lobby) {
+  return lobby.performances
+    .map((perf) => {
+      const votes = getPerformanceVotes(lobby, perf.id);
+      return { perf, avg: computeAverage(votes), votes };
+    })
+    .sort((a, b) => b.avg - a.avg);
+}
+
 export function computeLobbyStats(lobby, members) {
   const allVotes = lobby.votes;
   if (!allVotes.length) {
