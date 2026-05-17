@@ -50,9 +50,21 @@ export function setUserCache(user) {
   userCache = user;
 }
 
+function alignMembersWithIds(lobby) {
+  if (!lobby?.memberIds?.length) return lobby;
+  const byId = new Map((lobby.members || []).filter((m) => m?.id).map((m) => [m.id, m]));
+  return {
+    ...lobby,
+    members: lobby.memberIds.map(
+      (id) => byId.get(id) || { id, pseudo: 'Joueur', avatar: '🎤' }
+    ),
+  };
+}
+
 export function setLobbyCache(lobby, { emit = true } = {}) {
-  if (lobbyCache === lobby) return;
-  lobbyCache = lobby;
+  const synced = lobby ? alignMembersWithIds(lobby) : null;
+  if (lobbyCache === synced) return;
+  lobbyCache = synced;
   if (emit) window.dispatchEvent(new CustomEvent('eurolobby:update'));
 }
 

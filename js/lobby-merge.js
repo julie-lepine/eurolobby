@@ -57,11 +57,17 @@ export function mergeLobbyPayload(server, local) {
 
   const memberIds = [...new Set([...(server.memberIds || []), ...(local.memberIds || [])])];
 
+  const members = mergeMembers(server.members, local.members);
+  const memberById = new Map(members.map((m) => [m.id, m]));
+  const syncedMembers = memberIds.map(
+    (id) => memberById.get(id) || { id, pseudo: 'Joueur', avatar: '🎤' }
+  );
+
   return {
     ...server,
     ...local,
     memberIds,
-    members: mergeMembers(server.members, local.members),
+    members: syncedMembers,
     votes: mergeVotes(server.votes, local.votes),
     predictions: mergePredictions(server.predictions, local.predictions),
     chat: mergeChat(server.chat, local.chat),

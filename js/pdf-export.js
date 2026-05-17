@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { autoTable } from 'jspdf-autotable';
 import { formatAvg, formatScore, getCountryByCode } from './utils.js';
-import { getLobbyMembers, getUserPrediction } from './lobby.js';
+import { getLobbyMembers, getLobbyMemberCount, getUserPrediction } from './lobby.js';
 import {
   computeFullPerformanceRanking,
   computeLobbyStats,
@@ -11,6 +11,18 @@ import {
 
 const MARGIN = 14;
 
+function pdfText(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tableEndY(doc, fallbackY) {
+  return doc.lastAutoTable?.finalY ?? fallbackY;
+}
+
 function formatReportDate(ts) {
   const d = ts ? new Date(ts) : new Date();
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -18,7 +30,7 @@ function formatReportDate(ts) {
 
 function perfLabel(perf) {
   const meta = getCountryByCode(perf.code);
-  return meta?.country || perf.country || perf.code || '—';
+  return pdfText(meta?.country || perf.country || perf.code || '—');
 }
 
 function scoreFillColor(score) {
@@ -34,6 +46,7 @@ function scoreFillColor(score) {
 
 export function buildLobbyReportData(lobby, user) {
   const members = getLobbyMembers(lobby);
+  const memberCount = getLobbyMemberCount(lobby);
   const ranking = computeFullPerformanceRanking(lobby);
   const stats = computeLobbyStats(lobby, members);
 
@@ -41,7 +54,7 @@ export function buildLobbyReportData(lobby, user) {
     lobbyName: lobby.name || 'Lobby',
     lobbyCode: lobby.code || '',
     date: formatReportDate(lobby.finishedAt || lobby.createdAt),
-    memberCount: members.length,
+    memberCount,
     performanceCount: lobby.performances?.length ?? 0,
     voteCount: lobby.votes?.length ?? 0,
     winner: ranking[0] || null,
@@ -102,7 +115,11 @@ export function exportLobbyPdf(lobby, user, options = {}) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(90);
-  doc.text(`${data.lobbyName}  ·  Code ${data.lobbyCode}  ·  ${data.date}`, MARGIN, y);
+  doc.text(
+    pdfText(`${data.lobbyName}  ·  Code ${data.lobbyCode}  ·  ${data.date}`),
+    MARGIN,
+    y
+  );
   y += 5;
   doc.text(
     `${data.memberCount} participants  ·  ${data.performanceCount} prestations  ·  ${data.voteCount} votes`,
@@ -161,17 +178,17 @@ export function exportLobbyPdf(lobby, user, options = {}) {
     if (data.stats.generous) {
       rows.push([
         'Le plus genereux',
-        `${data.stats.generous.member.pseudo} (${formatAvg(data.stats.generous.avg)})`,
+        `${pdfText(data.stats.generous.member.pseudo)} (${formatAvg(data.stats.generous.avg)})`,
       ]);
     }
     if (data.stats.severe) {
       rows.push([
         'Le plus severe',
-        `${data.stats.severe.member.pseudo} (${formatAvg(data.stats.severe.avg)})`,
+        `${pdfText(data.stats.severe.member.pseudo)} (${formatAvg(data.stats.severe.avg)})`,
       ]);
     }
     if (data.stats.popular) {
-      rows.push(['Gouts populaires', data.stats.popular.member.pseudo]);
+      rows.push(['Gouts populaires', pdfText(data.stats.popular.member.pseudo)]);
     }
     autoTable(doc, {
       startY: y,
@@ -181,7 +198,7 @@ export function exportLobbyPdf(lobby, user, options = {}) {
       columnStyles: { 0: { fontStyle: 'bold', cellWidth: 55 } },
       margin: { left: MARGIN, right: MARGIN },
     });
-    y = doc.lastAutoTable.finalY + 8;
+    y = tableEndY(doc, y) + 8;
   }
 
   if (data.top3.length) {
@@ -200,7 +217,7 @@ export function exportLobbyPdf(lobby, user, options = {}) {
       styles: { fontSize: 9, cellPadding: 2 },
       margin: { left: MARGIN, right: MARGIN },
     });
-    y = doc.lastAutoTable.finalY + 8;
+    y = tableEndY(doc, y) + 8;
   }
 
   if (options.ranking && data.ranking.length) {
@@ -220,7 +237,7 @@ export function exportLobbyPdf(lobby, user, options = {}) {
       styles: { fontSize: 8, cellPadding: 1.5 },
       margin: { left: MARGIN, right: MARGIN },
     });
-    y = doc.lastAutoTable.finalY + 8;
+    y = tableEndY(doc, y) + 8;
   }
 
   const showVotes = options.detailedVotes || options.heatmap;

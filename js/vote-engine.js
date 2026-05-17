@@ -96,6 +96,9 @@ export function computeLobbyStats(lobby, members) {
     if (uv.length) byUser[m.id] = { member: m, avg: computeAverage(uv) };
   });
   const entries = Object.values(byUser);
+  if (!entries.length) {
+    return { groupAvg, generous: null, severe: null, popular: null };
+  }
   const generous = entries.reduce((a, b) => (b.avg > a.avg ? b : a), entries[0]);
   const severe = entries.reduce((a, b) => (b.avg < a.avg ? b : a), entries[0]);
   const popular = entries.reduce((a, b) => {

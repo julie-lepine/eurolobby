@@ -40,14 +40,44 @@ export async function getCountries() {
   return countriesCache;
 }
 
+/** Nombre de joueurs inscrits au lobby (source : memberIds). */
+export function getLobbyMemberCount(lobby) {
+  return lobby?.memberIds?.length ?? 0;
+}
+
+/** Liste des membres alignée sur memberIds (ordre du lobby). */
 export function getLobbyMembers(lobby) {
-  if (isRemoteMode()) {
-    const members = lobby.members || [];
-    if (members.length) return members;
-    return lobby.memberIds.map((id) => ({ id, pseudo: 'Joueur', avatar: '🎤' }));
+  const ids = lobby?.memberIds || [];
+  if (!ids.length) return [];
+
+  const byId = new Map();
+  for (const m of lobby.members || []) {
+    if (m?.id) {
+      byId.set(m.id, {
+        id: m.id,
+        pseudo: m.pseudo || 'Joueur',
+        avatar: m.avatar || '🎤',
+      });
+    }
   }
-  const db = loadDb();
-  return lobby.memberIds.map((id) => db.users.find((u) => u.id === id)).filter(Boolean);
+
+  if (!isRemoteMode()) {
+    const db = loadDb();
+    for (const u of db.users || []) {
+      if (u?.id && ids.includes(u.id)) byId.set(u.id, u);
+    }
+  }
+
+  return ids.map(
+    (id) => byId.get(id) || { id, pseudo: 'Joueur', avatar: '🎤' }
+  );
+}
+
+/** Garde members[] cohérent avec memberIds après fusion / chargement. */
+export function syncLobbyMembers(lobby) {
+  if (!lobby) return lobby;
+  const members = getLobbyMembers(lobby);
+  return { ...lobby, members };
 }
 
 export function getCurrentPerformance(lobby) {

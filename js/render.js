@@ -11,6 +11,7 @@
 import {
   getCurrentPerformance,
   getLobbyMembers,
+  getLobbyMemberCount,
   getRemainingSeconds,
   isVoteOpen,
   isAdmin,
@@ -415,6 +416,12 @@ export function renderResults(lobby, user) {
   const dist = computeDistribution(votes);
   const { min, max } = getMinMaxVoters(votes, members);
 
+  const memberCount = getLobbyMemberCount(lobby);
+  const resultsMeta = document.getElementById('results-lobby-meta');
+  if (resultsMeta) {
+    resultsMeta.textContent = `${lobby.name || 'Lobby'} · ${memberCount} participant${memberCount > 1 ? 's' : ''}`;
+  }
+
   const resultsTitle = document.getElementById('results-title');
   if (resultsTitle) {
     resultsTitle.innerHTML = `${flagImgHtml(perf, { width: 40, className: 'flag-icon flag-icon--inline' })} ${escapeHtml(perf.country)}`;
@@ -470,7 +477,7 @@ export function renderResults(lobby, user) {
       : '→ Prestation suivante';
   }
   if (progress) {
-    progress.textContent = `${lobby.currentPerformanceIndex + 1}/${lobby.performances.length} prestations`;
+    progress.textContent = `${lobby.currentPerformanceIndex + 1}/${lobby.performances.length} prestations · ${memberCount} joueurs`;
   }
   if (list) {
     list.innerHTML = ranking
@@ -557,21 +564,63 @@ export function renderFinal(lobby, user) {
   setText('stat-generous', stats.generous ? `${stats.generous.member.pseudo} ${stats.generous.member.avatar}` : '—');
   setText('stat-group-avg', `${formatAvg(stats.groupAvg)} / 3`);
 
+  const metaEl = document.getElementById('final-ranking-meta');
+  if (metaEl) {
+    metaEl.textContent = `${lobby.performances.length} prestations · ${getLobbyMemberCount(lobby)} membres`;
+  }
+
+  const voted = ranking.filter((r) => r.votes.length > 0);
+  const emptyEl = document.getElementById('final-ranking-empty');
   const podium = document.getElementById('podium-row');
-  if (podium && ranking.length >= 3) {
-    const top3 = [ranking[1], ranking[0], ranking[2]];
-    const blocks = ['podium-2', 'podium-1', 'podium-3'];
-    const delays = ['0.3s', '0.1s', '0.5s'];
-    const places = ['2', '1', '3'];
-    podium.innerHTML = top3
-      .map(
-        (r, i) => `<div class="podium-item">
+
+  if (podium) {
+    if (voted.length >= 3) {
+      const top3 = [voted[1], voted[0], voted[2]];
+      const blocks = ['podium-2', 'podium-1', 'podium-3'];
+      const delays = ['0.3s', '0.1s', '0.5s'];
+      const places = ['2', '1', '3'];
+      podium.innerHTML = top3
+        .map(
+          (r, i) => `<div class="podium-item">
           <div class="podium-flag" style="--delay:${delays[i]}">${flagImgHtml(r.perf, { width: 96, className: 'flag-icon flag-icon--podium' })}</div>
           <div class="podium-country">${escapeHtml(r.perf.country)}</div>
           <div class="podium-score">${formatAvg(r.avg)}</div>
           <div class="podium-block ${blocks[i]}">${places[i]}</div>
         </div>`
-      )
+        )
+        .join('');
+      if (emptyEl) emptyEl.style.display = 'none';
+    } else if (voted.length > 0) {
+      podium.innerHTML = voted
+        .map(
+          (r, i) => `<div class="podium-item podium-item--compact">
+            <div class="podium-flag">${flagImgHtml(r.perf, { width: 72, className: 'flag-icon flag-icon--podium' })}</div>
+            <div class="podium-country">${escapeHtml(r.perf.country)}</div>
+            <div class="podium-score">${formatAvg(r.avg)}</div>
+            <div class="podium-block podium-${i + 1}">${i + 1}</div>
+          </div>`
+        )
+        .join('');
+      if (emptyEl) emptyEl.style.display = 'none';
+    } else {
+      podium.innerHTML = '';
+      if (emptyEl) emptyEl.style.display = '';
+    }
+  }
+
+  const compact = document.getElementById('final-ranking-compact');
+  if (compact) {
+    compact.innerHTML = voted
+      .slice(0, 10)
+      .map((r, i) => {
+        const rankCls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+        return `<div class="ranking-item">
+          <div class="rank-num ${rankCls}">${i + 1}</div>
+          <div class="rank-flag">${flagImgHtml(r.perf, { width: 64, className: 'flag-icon flag-icon--rank' })}</div>
+          <div class="rank-country">${escapeHtml(r.perf.country)}</div>
+          <div class="rank-score">${formatAvg(r.avg)}</div>
+        </div>`;
+      })
       .join('');
   }
 }

@@ -379,7 +379,7 @@
       Vote
     </button>
     <div class="results-title mt-16" id="results-title">🇮🇹 Italie</div>
-    <div style="color:var(--muted);font-size:14px">Résultats du lobby</div>
+    <div style="color:var(--muted);font-size:14px" id="results-lobby-meta">Résultats du lobby</div>
   </div>
 
   <div class="results-body">
@@ -491,15 +491,25 @@
     <p class="user-winner-caption">Le pays auquel vous avez attribué votre meilleure note.</p>
   </section>
 
-  <div class="final-general-divider" id="final-general-divider">
-    <span>Classement général</span>
+  <div class="final-actions">
+    <button class="btn btn-primary" type="button" onclick="goTo('screen-export')">📄 Exporter en PDF</button>
+    <button class="btn btn-secondary" type="button" onclick="goTo('screen-dashboard')">← Retour au dashboard</button>
+  </div>
+
+  <div class="section-header final-ranking-header">
+    <div class="section-title">Classement final</div>
+    <div class="section-action" id="final-ranking-meta">—</div>
   </div>
 
   <div class="podium-area">
-    <div class="final-title">🏆 Classement final</div>
-    <div style="color:var(--muted);font-size:14px;margin-top:4px">25 prestations · Lobby de 6</div>
-
     <div class="podium-row" id="podium-row"></div>
+    <p class="final-ranking-empty" id="final-ranking-empty" style="display:none">Aucun vote enregistré pour afficher le podium.</p>
+  </div>
+
+  <div class="ranking-list final-ranking-compact" id="final-ranking-compact"></div>
+
+  <div class="section-header">
+    <div class="section-title">Statistiques</div>
   </div>
 
   <div class="stats-grid">
@@ -523,11 +533,6 @@
       <div class="stat-title">MOYENNE GROUPE</div>
       <div class="stat-val" id="stat-group-avg">—</div>
     </div>
-  </div>
-
-  <div class="final-actions">
-    <button class="btn btn-primary" type="button" onclick="goTo('screen-export')">📄 Exporter en PDF</button>
-    <button class="btn btn-secondary" type="button" onclick="goTo('screen-dashboard')">← Retour au dashboard</button>
   </div>
 
   </div>

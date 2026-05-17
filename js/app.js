@@ -253,7 +253,12 @@ export function goTo(id) {
   syncBottomNav(id);
   revealTriggered = false;
 
-  if (id === 'screen-final') initConfetti();
+  if (id === 'screen-final') {
+    initConfetti();
+    requestAnimationFrame(() => {
+      target.scrollTop = 0;
+    });
+  }
   if (id === 'screen-vote') {
     resetVoteUIIfNeeded(getLobby());
     startTimerLoop();
@@ -715,12 +720,16 @@ export async function sendChat() {
   markChatScrollForce();
 }
 
-export function exportPdf() {
-  const lobby = getLobby();
+export async function exportPdf() {
   const user = getCurrentUser();
+  const session = getSession();
+  let lobby = getLobby();
   if (!lobby) {
     showToast('Aucun lobby à exporter.');
     return;
+  }
+  if (session?.lobbyId && isRemoteMode()) {
+    lobby = (await ensureLobbyCache(session.lobbyId)) || lobby;
   }
   if (!lobby.votes?.length) {
     showToast('Aucun vote enregistré pour ce lobby.');
@@ -732,7 +741,7 @@ export function exportPdf() {
     showToast('PDF téléchargé !');
   } catch (err) {
     console.error('exportPdf', err);
-    showToast('Erreur lors de la génération du PDF.');
+    showToast(`Erreur PDF : ${err?.message || 'génération impossible'}`);
   }
 }
 
