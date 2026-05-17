@@ -259,11 +259,16 @@ export function goTo(id) {
     return;
   }
 
-  document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach((s) => {
+    s.classList.remove('active', 'with-bottom-nav');
+  });
   const target = document.getElementById(id);
   if (!target) return;
 
   target.classList.add('active');
+  if (BOTTOM_NAV_SCREENS.includes(id)) {
+    target.classList.add('with-bottom-nav');
+  }
   target.scrollTop = 0;
   target.querySelector('.results-body')?.scrollTo(0, 0);
 

@@ -51,13 +51,19 @@ body {
 
 .screen {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow-y: auto;
   overflow-x: hidden;
   display: none;
   flex-direction: column;
   background: var(--bg);
   scrollbar-width: none;
+}
+.screen.with-bottom-nav {
+  bottom: var(--bottom-nav-height);
 }
 .screen::-webkit-scrollbar {
   display: none;
@@ -1418,7 +1424,7 @@ button.quick-btn {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  padding-bottom: 100px;
+  padding-bottom: 24px;
 }
 .results-header {
   padding: 56px 24px 20px;
@@ -1583,8 +1589,7 @@ button.quick-btn {
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   overscroll-behavior: contain;
-  padding-bottom: var(--bottom-nav-safe);
-  scroll-padding-bottom: var(--bottom-nav-safe);
+  padding-bottom: 24px;
   box-sizing: border-box;
 }
 
