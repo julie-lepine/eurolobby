@@ -1547,6 +1547,11 @@ button.quick-btn {
   font-weight: 800;
   color: var(--accent);
 }
+.rank-votes-muted {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted2);
+}
 
 /* ===== SCREEN: FINAL ===== */
 .screen.final-screen {
@@ -1562,15 +1567,20 @@ button.quick-btn {
 .screen.final-screen.active {
   transform: none;
   animation: none;
+  display: block;
 }
 .final-content {
   position: relative;
   z-index: 2;
+  width: 100%;
+  flex-shrink: 0;
+  min-height: min-content;
+  padding-bottom: 32px;
 }
 .prediction-block {
-  margin-bottom: 8px;
+  margin-bottom: 24px;
   padding-top: 4px;
-  padding-bottom: 4px;
+  padding-bottom: 20px;
   border-radius: var(--r2);
   background: rgba(255, 215, 64, 0.06);
   border: 1px solid rgba(255, 215, 64, 0.22);
@@ -1634,7 +1644,12 @@ button.quick-btn {
   padding-top: 12px;
 }
 .final-ranking-compact {
-  padding-bottom: 8px;
+  padding-bottom: 16px;
+  min-height: 48px;
+}
+.final-compact-header {
+  padding-top: 4px;
+  padding-bottom: 4px;
 }
 .final-ranking-empty {
   text-align: center;
@@ -1817,7 +1832,8 @@ button.quick-btn {
   align-items: flex-end;
   justify-content: center;
   gap: 8px;
-  margin: 32px 0;
+  margin: 24px 0 16px;
+  min-height: 200px;
 }
 .podium-item {
   display: flex;

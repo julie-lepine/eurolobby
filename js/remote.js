@@ -147,14 +147,8 @@ export async function fetchUserLobbies(userId) {
     .contains('member_ids', [userId])
     .order('updated_at', { ascending: false });
   if (error) {
-    const { data: fallback, error: err2 } = await supabase
-      .from('lobbies')
-      .select('payload')
-      .order('updated_at', { ascending: false });
-    if (err2) throw err2;
-    return (fallback || [])
-      .map((r) => r.payload)
-      .filter((l) => l?.memberIds?.includes(userId));
+    console.error('fetchUserLobbies', error);
+    return [];
   }
   return (data || []).map((r) => r.payload);
 }

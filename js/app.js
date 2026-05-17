@@ -239,6 +239,18 @@ function bindDashboardActions() {
 }
 
 export function goTo(id) {
+  const lobby = getLobby();
+  const user = getCurrentUser();
+  if (
+    id === 'screen-final' &&
+    lobby &&
+    lobby.status !== 'finished' &&
+    !isAdmin(lobby, user?.id)
+  ) {
+    showToast('Le classement final sera disponible à la fin de la soirée.');
+    return;
+  }
+
   document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
   const target = document.getElementById(id);
   if (!target) return;
@@ -578,8 +590,10 @@ export async function resultsNext() {
     return;
   }
 
-  if (isLastPerformance || lobby.status === 'finished') {
+  if (lobby.status === 'finished') {
     goTo('screen-final');
+  } else if (isLastPerformance) {
+    showToast('En attente de la clôture par l\'admin…');
   } else {
     goTo('screen-vote');
   }
@@ -608,6 +622,7 @@ export async function castVote(el, val) {
   const result = await submitVote(val);
   if (result?.ok === false) {
     showToast(result.error || 'Vote refusé');
+    renderAll(getLobby());
     return;
   }
   document.querySelectorAll('.vote-btn').forEach((b) => {
@@ -882,11 +897,46 @@ async function initRemote() {
   return { user, lobby };
 }
 
+function getInviteCodeFromUrl() {
+  const code = new URLSearchParams(location.search).get('lobby')?.trim().toUpperCase();
+  return code && code.length >= 4 ? code : '';
+}
+
+async function handleInviteFromUrl() {
+  const code = getInviteCodeFromUrl();
+  if (!code) return;
+
+  const input = document.getElementById('join-code-input');
+  if (input) input.value = code;
+
+  const user = getCurrentUser();
+  if (!user) {
+    goTo('screen-join');
+    showToast(`Code ${code} — connecte-toi pour rejoindre.`);
+    return;
+  }
+
+  const result = await joinLobby(code);
+  if (!result.ok) {
+    showToast(result.error || 'Impossible de rejoindre ce lobby.');
+    goTo('screen-join');
+    return;
+  }
+  setupLobbyRealtime(result.lobby.id);
+  if (isUsingRemote()) await refreshUserLobbies(user.id);
+  showToast(`Bienvenue dans ${result.lobby.name} !`);
+  if (result.lobby.status === 'live') goTo('screen-vote');
+  else if (result.lobby.status === 'finished') goTo('screen-final');
+  else goTo('screen-waiting');
+}
+
 async function init() {
   initStars();
   bindEvents();
   exposeGlobals();
   previewCreateCode();
+
+  const inviteCode = getInviteCodeFromUrl();
 
   try {
     const { user, lobby } = (await initRemote()) || { user: null, lobby: null };
@@ -898,7 +948,14 @@ async function init() {
         console.error('refresh', err);
         showToast('Erreur de chargement — réessaie de te connecter.');
       }
-      navigateAfterRestore(lobby || getLobby());
+      if (inviteCode) {
+        await handleInviteFromUrl();
+      } else {
+        navigateAfterRestore(lobby || getLobby());
+      }
+    } else if (inviteCode) {
+      goTo('screen-join');
+      showToast(`Code ${inviteCode} — connecte-toi pour rejoindre.`);
     }
   } catch (err) {
     console.error('init', err);

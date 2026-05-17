@@ -176,14 +176,24 @@ export async function refreshUserLobbies(userId) {
   return normalizedList;
 }
 
-export function updateLobby(lobbyId, updater) {
+export async function updateLobby(lobbyId, updater, { awaitPersist = false } = {}) {
   if (isRemoteMode()) {
     const current = lobbyCache;
     if (!current || current.id !== lobbyId) return null;
     const next = typeof updater === 'function' ? updater({ ...current }) : updater;
+    if (!next) return null;
     setLobbyCache(next, { emit: false });
-    persistLobby(next).catch((err) => console.error('saveLobby', err));
-    return next;
+    try {
+      if (awaitPersist) {
+        return await persistLobby(next);
+      }
+      persistLobby(next).catch((err) => console.error('saveLobby', err));
+      return next;
+    } catch (err) {
+      console.error('persistLobby', err);
+      await hydrateLobby(lobbyId);
+      return null;
+    }
   }
 
   const db = loadDb();

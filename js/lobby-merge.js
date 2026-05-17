@@ -50,7 +50,40 @@ function mergeMembers(serverMembers = [], localMembers = []) {
   return Array.from(byId.values());
 }
 
-/** Combine l'état serveur avec les modifications locales (priorité locale hors votes/chat). */
+/** Choisit l'état de partie le plus avancé (index, statut, timer). */
+export function pickGameState(server, local) {
+  const sIdx = server.currentPerformanceIndex ?? 0;
+  const lIdx = local.currentPerformanceIndex ?? 0;
+
+  let base;
+  if (lIdx > sIdx) base = local;
+  else if (sIdx > lIdx) base = server;
+  else if (server.status === 'finished' || local.status === 'finished') {
+    base = server.status === 'finished' ? server : local;
+  } else if ((local.timerEndsAt ?? 0) > (server.timerEndsAt ?? 0)) {
+    base = local;
+  } else if ((server.timerEndsAt ?? 0) > (local.timerEndsAt ?? 0)) {
+    base = server;
+  } else {
+    base = server;
+  }
+
+  const performances =
+    (base.performances?.length ?? 0) >= (server.performances?.length ?? 0)
+      ? base.performances || server.performances
+      : server.performances || local.performances;
+
+  return {
+    currentPerformanceIndex: base.currentPerformanceIndex ?? 0,
+    status: base.status ?? server.status,
+    timerEndsAt: base.timerEndsAt ?? null,
+    finishedAt: base.finishedAt ?? server.finishedAt ?? local.finishedAt ?? null,
+    performances: performances || [],
+    revealed: !!(server.revealed || local.revealed),
+  };
+}
+
+/** Combine serveur + local : fusion sur votes/chat ; état de partie = le plus avancé. */
 export function mergeLobbyPayload(server, local) {
   if (!server) return local;
   if (!local) return server;
@@ -63,9 +96,19 @@ export function mergeLobbyPayload(server, local) {
     (id) => memberById.get(id) || { id, pseudo: 'Joueur', avatar: '🎤' }
   );
 
+  const game = pickGameState(server, local);
+
   return {
     ...server,
-    ...local,
+    ...game,
+    id: server.id,
+    code: server.code,
+    adminId: server.adminId,
+    name: server.name ?? local.name,
+    maxPlayers: server.maxPlayers ?? local.maxPlayers,
+    isPrivate: server.isPrivate ?? local.isPrivate,
+    dramaticReveal: server.dramaticReveal ?? local.dramaticReveal,
+    createdAt: server.createdAt ?? local.createdAt,
     memberIds,
     members: syncedMembers,
     votes: mergeVotes(server.votes, local.votes),

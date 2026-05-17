@@ -201,6 +201,10 @@ export async function joinLobby(code) {
 
   lobby.memberIds.push(user.id);
   lobby.ready[user.id] = false;
+  lobby.members = [
+    ...(lobby.members || []),
+    { id: user.id, pseudo: user.pseudo, avatar: user.avatar },
+  ];
   saveDb(db);
   setSession({ ...getSession(), lobbyId: lobby.id });
   return { ok: true, lobby };
@@ -217,11 +221,17 @@ export async function setReady(isReady) {
   });
 }
 
+function persistOpts() {
+  return isRemoteMode() ? { awaitPersist: true } : {};
+}
+
 export async function startPerformance() {
   const user = getCurrentUser();
   const session = getSession();
   if (!(await ensureCacheForUpdate())) return null;
-  return updateLobby(session.lobbyId, (l) => {
+  return updateLobby(
+    session.lobbyId,
+    (l) => {
     if (!l || l.adminId !== user?.id) return l;
     return {
       ...l,
@@ -229,20 +239,24 @@ export async function startPerformance() {
       timerEndsAt: Date.now() + VOTE_DURATION * 1000,
       revealed: false,
     };
-  });
+    },
+    persistOpts()
+  );
 }
 
 export async function stopTimer() {
   const session = getSession();
   if (!(await ensureCacheForUpdate())) return null;
-  return updateLobby(session.lobbyId, (l) => ({ ...l, timerEndsAt: null }));
+  return updateLobby(session.lobbyId, (l) => ({ ...l, timerEndsAt: null }), persistOpts());
 }
 
 export async function nextPerformance() {
   const user = getCurrentUser();
   const session = getSession();
   if (!(await ensureCacheForUpdate())) return null;
-  return updateLobby(session.lobbyId, (l) => {
+  return updateLobby(
+    session.lobbyId,
+    (l) => {
     if (!l || l.adminId !== user?.id) return l;
     const next = l.currentPerformanceIndex + 1;
     if (next >= l.performances.length) {
@@ -255,14 +269,18 @@ export async function nextPerformance() {
       revealed: false,
       status: 'live',
     };
-  });
+    },
+    persistOpts()
+  );
 }
 
 export async function resetLobby() {
   const user = getCurrentUser();
   const session = getSession();
   if (!(await ensureCacheForUpdate())) return null;
-  return updateLobby(session.lobbyId, (l) => {
+  return updateLobby(
+    session.lobbyId,
+    (l) => {
     if (!l || l.adminId !== user?.id) return l;
     return {
       ...l,
@@ -276,7 +294,9 @@ export async function resetLobby() {
       revealed: false,
       finishedAt: null,
     };
-  });
+    },
+    persistOpts()
+  );
 }
 
 export async function submitVote(score) {
@@ -294,21 +314,27 @@ export async function submitVote(score) {
     return { ok: false, error: 'Le vote est fermé.' };
   }
 
-  const updated = updateLobby(session.lobbyId, (l) => {
-    if (!l) return l;
-    const perf = l.performances[l.currentPerformanceIndex];
-    if (!perf) return l;
-    const votes = l.votes.filter((v) => !(v.performanceId === perf.id && v.userId === user.id));
-    votes.push({
-      id: uid(),
-      performanceId: perf.id,
-      userId: user.id,
-      score,
-      createdAt: Date.now(),
-    });
-    return { ...l, votes };
-  });
-  return updated ? { ok: true, lobby: updated } : { ok: false, error: 'Erreur vote.' };
+  const updated = await updateLobby(
+    session.lobbyId,
+    (l) => {
+      if (!l) return l;
+      const perf = l.performances[l.currentPerformanceIndex];
+      if (!perf) return l;
+      const votes = l.votes.filter((v) => !(v.performanceId === perf.id && v.userId === user.id));
+      votes.push({
+        id: uid(),
+        performanceId: perf.id,
+        userId: user.id,
+        score,
+        createdAt: Date.now(),
+      });
+      return { ...l, votes };
+    },
+    persistOpts()
+  );
+  return updated
+    ? { ok: true, lobby: updated }
+    : { ok: false, error: isRemoteMode() ? 'Erreur de synchronisation du vote.' : 'Erreur vote.' };
 }
 
 export function getUserPrediction(lobby, userId) {
@@ -329,19 +355,25 @@ export async function submitPrediction(text) {
     if (!hydrated) return { ok: false, error: 'Lobby introuvable.' };
   }
 
-  const updated = updateLobby(session.lobbyId, (l) => {
-    if (!l) return l;
-    const predictions = (l.predictions || []).filter((p) => p.userId !== user.id);
-    predictions.push({ userId: user.id, text: trimmed, updatedAt: Date.now() });
-    return { ...l, predictions };
-  });
-  return updated ? { ok: true, lobby: updated } : { ok: false, error: 'Erreur enregistrement.' };
+  const updated = await updateLobby(
+    session.lobbyId,
+    (l) => {
+      if (!l) return l;
+      const predictions = (l.predictions || []).filter((p) => p.userId !== user.id);
+      predictions.push({ userId: user.id, text: trimmed, updatedAt: Date.now() });
+      return { ...l, predictions };
+    },
+    persistOpts()
+  );
+  return updated
+    ? { ok: true, lobby: updated }
+    : { ok: false, error: isRemoteMode() ? 'Erreur de synchronisation.' : 'Erreur enregistrement.' };
 }
 
 export async function setRevealed() {
   const session = getSession();
   if (!(await ensureCacheForUpdate())) return null;
-  return updateLobby(session.lobbyId, (l) => (l ? { ...l, revealed: true } : l));
+  return updateLobby(session.lobbyId, (l) => (l ? { ...l, revealed: true } : l), persistOpts());
 }
 
 export async function sendChatMessage(text) {

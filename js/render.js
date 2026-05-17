@@ -173,7 +173,7 @@ export function renderDashboardLive(lobby) {
   if (lobby.status === 'live') {
     const perf = getCurrentPerformance(lobby);
     sub.textContent = perf
-      ? `Prestation ${lobby.currentPerformanceIndex + 1} · ${perf.country} ${perf.flag}`
+      ? `Prestation ${lobby.currentPerformanceIndex + 1} · ${perf.country}`
       : 'En direct';
     if (btn) btn.style.display = '';
   } else {
@@ -340,7 +340,7 @@ export function renderReveal(lobby) {
 
   if (subEl) {
     const voteLabel = votes.length > 1 ? 'votes' : 'vote';
-    subEl.textContent = `${perf.flag} ${perf.country} · ${votes.length}/${members.length} ${voteLabel}`;
+    subEl.innerHTML = `${flagImgHtml(perf, { width: 24, className: 'flag-icon flag-icon--inline' })} ${escapeHtml(perf.country)} · ${votes.length}/${members.length} ${voteLabel}`;
   }
 
   if (members.length === 0) {
@@ -569,13 +569,13 @@ export function renderFinal(lobby, user) {
     metaEl.textContent = `${lobby.performances.length} prestations · ${getLobbyMemberCount(lobby)} membres`;
   }
 
-  const voted = ranking.filter((r) => r.votes.length > 0);
+  const hasAnyVotes = ranking.some((r) => r.votes.length > 0);
   const emptyEl = document.getElementById('final-ranking-empty');
   const podium = document.getElementById('podium-row');
 
   if (podium) {
-    if (voted.length >= 3) {
-      const top3 = [voted[1], voted[0], voted[2]];
+    if (ranking.length >= 3) {
+      const top3 = [ranking[1], ranking[0], ranking[2]];
       const blocks = ['podium-2', 'podium-1', 'podium-3'];
       const delays = ['0.3s', '0.1s', '0.5s'];
       const places = ['2', '1', '3'];
@@ -589,9 +589,9 @@ export function renderFinal(lobby, user) {
         </div>`
         )
         .join('');
-      if (emptyEl) emptyEl.style.display = 'none';
-    } else if (voted.length > 0) {
-      podium.innerHTML = voted
+      if (emptyEl) emptyEl.style.display = hasAnyVotes ? 'none' : '';
+    } else if (ranking.length > 0) {
+      podium.innerHTML = ranking
         .map(
           (r, i) => `<div class="podium-item podium-item--compact">
             <div class="podium-flag">${flagImgHtml(r.perf, { width: 72, className: 'flag-icon flag-icon--podium' })}</div>
@@ -601,7 +601,7 @@ export function renderFinal(lobby, user) {
           </div>`
         )
         .join('');
-      if (emptyEl) emptyEl.style.display = 'none';
+      if (emptyEl) emptyEl.style.display = hasAnyVotes ? 'none' : '';
     } else {
       podium.innerHTML = '';
       if (emptyEl) emptyEl.style.display = '';
@@ -609,8 +609,12 @@ export function renderFinal(lobby, user) {
   }
 
   const compact = document.getElementById('final-ranking-compact');
+  const compactHeader = document.querySelector('.final-compact-header');
+  if (compactHeader) {
+    compactHeader.style.display = ranking.length ? '' : 'none';
+  }
   if (compact) {
-    compact.innerHTML = voted
+    compact.innerHTML = ranking
       .slice(0, 10)
       .map((r, i) => {
         const rankCls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
