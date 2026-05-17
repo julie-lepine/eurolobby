@@ -34,7 +34,8 @@ export function scoreClass(n) {
 }
 
 export async function loadCountries() {
-  const res = await fetch('./data/countries-2025.json');
+  const url = `${import.meta.env.BASE_URL}data/countries-2025.json`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error('Impossible de charger le catalogue pays');
   return res.json();
 }

@@ -49,9 +49,24 @@ data/
 1. Copier `.env.example` → `.env.local` et remplir `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`
 2. Dans le [dashboard Supabase](https://supabase.com/dashboard) → **SQL Editor**, exécuter le fichier `supabase/schema.sql`
 3. **Authentication** → désactiver « Confirm email » pour les tests rapides (ou confirmer les emails à l’inscription)
-4. `npm run dev` — si les variables sont définies, l’app passe en **mode en ligne** (lobbys partagés + Realtime)
+4. **Authentication** → **URL Configuration** → ajouter `https://julie-lepine.github.io/eurolobby/` dans Site URL et Redirect URLs
+5. `npm run dev` — ouvrir `http://localhost:5173/eurolobby/` — toast « Mode en ligne » si Supabase est configuré
 
 Sans `.env.local`, l’app reste en mode **localStorage** (un navigateur = une base).
+
+## Déploiement GitHub Pages
+
+Le workflow `.github/workflows/deploy.yml` build `dist/` (Vite + bundle Supabase) et publie sur Pages.
+
+### Configuration GitHub (une fois)
+
+1. Repo **Settings** → **Secrets and variables** → **Actions** → **New repository secret** :
+   - `VITE_SUPABASE_URL` = Project URL (Supabase → Settings → API)
+   - `VITE_SUPABASE_ANON_KEY` = clé **anon** (publique)
+2. **Settings** → **Pages** → **Build and deployment** → Source : **GitHub Actions**
+3. Pousser sur `main` : l’action **Deploy GitHub Pages** se lance automatiquement
+
+Site : https://julie-lepine.github.io/eurolobby/
 
 ## Roadmap
 

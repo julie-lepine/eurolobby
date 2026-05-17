@@ -49,5 +49,15 @@ create policy "lobbies_select" on public.lobbies for select using (true);
 create policy "lobbies_insert" on public.lobbies for insert with check (true);
 create policy "lobbies_update" on public.lobbies for update using (true);
 
--- Realtime sur les mises à jour de lobby
-alter publication supabase_realtime add table public.lobbies;
+-- Realtime sur les mises à jour de lobby (idempotent si déjà activé)
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'lobbies'
+  ) then
+    alter publication supabase_realtime add table public.lobbies;
+  end if;
+end $$;
