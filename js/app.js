@@ -36,6 +36,7 @@ import {
   deleteLobby,
 } from './lobby.js';
 import { renderAll, renderReveal, renderCreatePreview, markChatScrollForce } from './render.js';
+import { exportLobbyPdf, readExportOptions } from './pdf-export.js';
 
 const BOTTOM_NAV_SCREENS = [
   'screen-dashboard',
@@ -261,7 +262,15 @@ export function goTo(id) {
     if (id !== 'screen-results') hideReveal();
   }
 
-  if (id === 'screen-dashboard' || id === 'screen-waiting' || id === 'screen-vote' || id === 'screen-results' || id === 'screen-final' || id === 'screen-admin') {
+  if (
+    id === 'screen-dashboard' ||
+    id === 'screen-waiting' ||
+    id === 'screen-vote' ||
+    id === 'screen-results' ||
+    id === 'screen-final' ||
+    id === 'screen-admin' ||
+    id === 'screen-export'
+  ) {
     refresh();
   }
 }
@@ -707,7 +716,24 @@ export async function sendChat() {
 }
 
 export function exportPdf() {
-  showToast('Export PDF : branche jsPDF (Phase 5)');
+  const lobby = getLobby();
+  const user = getCurrentUser();
+  if (!lobby) {
+    showToast('Aucun lobby à exporter.');
+    return;
+  }
+  if (!lobby.votes?.length) {
+    showToast('Aucun vote enregistré pour ce lobby.');
+    return;
+  }
+  try {
+    showToast('Génération du PDF…');
+    exportLobbyPdf(lobby, user, readExportOptions());
+    showToast('PDF téléchargé !');
+  } catch (err) {
+    console.error('exportPdf', err);
+    showToast('Erreur lors de la génération du PDF.');
+  }
 }
 
 export function shareResults() {

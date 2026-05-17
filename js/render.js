@@ -27,6 +27,7 @@ import {
   computeLobbyStats,
   computeUserWinner,
 } from './vote-engine.js';
+import { buildLobbyReportData } from './pdf-export.js';
 
 let chatScrollForce = false;
 
@@ -57,7 +58,31 @@ export function renderAll(lobby) {
   renderReveal(lobby, user);
   renderResults(lobby, user);
   renderFinal(lobby, user);
+  renderExportPreview(lobby, user);
   renderAdmin(lobby, user);
+}
+
+export function renderExportPreview(lobby, user) {
+  if (!lobby) return;
+  const data = buildLobbyReportData(lobby, user);
+  const lobbyEl = document.getElementById('export-preview-lobby');
+  if (lobbyEl) {
+    lobbyEl.textContent = `${data.lobbyName} · ${data.memberCount} membres`;
+  }
+  const winnerEl = document.getElementById('export-preview-winner');
+  if (winnerEl) {
+    winnerEl.textContent = data.winner
+      ? `${perfLabelForExport(data.winner.perf)} (${formatAvg(data.winner.avg)})`
+      : '—';
+  }
+  setText('export-preview-members', `${data.memberCount} votants`);
+  setText('export-preview-perfs', `${data.performanceCount} pays`);
+  setText('export-preview-avg', `${formatAvg(data.stats.groupAvg)} / 3`);
+}
+
+function perfLabelForExport(perf) {
+  const meta = getCountryByCode(perf.code);
+  return meta?.country || perf.country || '—';
 }
 
 export function renderDashboardHeader(user) {
