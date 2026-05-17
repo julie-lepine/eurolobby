@@ -1495,11 +1495,12 @@ button.quick-btn {
 
 /* ===== SCREEN: FINAL ===== */
 .screen.final-screen {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  height: 100%;
-  max-height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   background: var(--bg);
   position: relative;
 }
@@ -1507,29 +1508,21 @@ button.quick-btn {
   transform: none;
   animation: none;
 }
-.final-header {
-  flex-shrink: 0;
+.final-content {
   position: relative;
   z-index: 2;
 }
-.final-body {
-  flex: 1 1 0;
-  min-height: 0;
-  height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-  overscroll-behavior: contain;
-  padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
-  position: relative;
-  z-index: 2;
+.final-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 20px 16px;
 }
-.final-body .section-header {
+.final-content .section-header {
   padding-top: 8px;
 }
-.final-body .ranking-list {
-  padding-bottom: 8px;
+.final-content .ranking-list {
+  padding-bottom: 24px;
 }
 
 .confetti-area {

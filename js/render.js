@@ -392,6 +392,14 @@ export function renderResults(lobby) {
   const ranking = computePerformanceRanking(lobby);
   const list = document.getElementById('results-ranking');
   const progress = document.getElementById('results-progress');
+  const isLastPerformance =
+    lobby.currentPerformanceIndex >= lobby.performances.length - 1;
+  const nextBtn = document.getElementById('results-next-btn');
+  if (nextBtn) {
+    nextBtn.textContent = isLastPerformance
+      ? '🏆 Classement final'
+      : '→ Prestation suivante';
+  }
   if (progress) {
     progress.textContent = `${lobby.currentPerformanceIndex + 1}/${lobby.performances.length} prestations`;
   }

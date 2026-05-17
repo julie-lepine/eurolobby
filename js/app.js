@@ -244,7 +244,6 @@ export function goTo(id) {
   target.classList.add('active');
   target.scrollTop = 0;
   target.querySelector('.results-body')?.scrollTo(0, 0);
-  target.querySelector('.final-body')?.scrollTo(0, 0);
 
   const nav = document.getElementById('bottom-nav');
   if (nav) nav.style.display = BOTTOM_NAV_SCREENS.includes(id) ? 'flex' : 'none';
@@ -542,8 +541,18 @@ export async function adminReset() {
 export async function resultsNext() {
   const lobby = getLobby();
   const user = getCurrentUser();
+  if (!lobby) return;
+
+  const isLastPerformance =
+    lobby.currentPerformanceIndex >= lobby.performances.length - 1;
+
   if (isAdmin(lobby, user?.id)) {
     await adminNext();
+    return;
+  }
+
+  if (isLastPerformance || lobby.status === 'finished') {
+    goTo('screen-final');
   } else {
     goTo('screen-vote');
   }

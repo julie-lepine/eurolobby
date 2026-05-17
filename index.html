@@ -414,7 +414,7 @@
   </div>
 
   <div class="results-actions page-pad">
-    <button class="btn btn-primary" onclick="resultsNext()">→ Prestation suivante</button>
+    <button class="btn btn-primary" id="results-next-btn" type="button" onclick="resultsNext()">→ Prestation suivante</button>
   </div>
 
   <div class="section-header">
@@ -462,7 +462,7 @@
 <div class="screen final-screen" id="screen-final">
   <div class="confetti-area" id="confetti"></div>
 
-  <div class="final-header">
+  <div class="final-content">
   <div class="podium-area">
     <div class="final-title">🏆 Classement final</div>
     <div style="color:var(--muted);font-size:14px;margin-top:4px">25 prestations · Lobby de 6</div>
@@ -492,18 +492,17 @@
       <div class="stat-val" id="stat-group-avg">—</div>
     </div>
   </div>
-  </div>
 
-  <div class="final-body">
   <div class="section-header">
     <div class="section-title">Classement complet</div>
   </div>
-  <div class="ranking-list" id="final-ranking"></div>
 
-  <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
-    <button class="btn btn-primary" onclick="goTo('screen-export')">📄 Exporter en PDF</button>
-    <button class="btn btn-secondary" onclick="goTo('screen-dashboard')">← Retour au dashboard</button>
+  <div class="final-actions">
+    <button class="btn btn-primary" type="button" onclick="goTo('screen-export')">📄 Exporter en PDF</button>
+    <button class="btn btn-secondary" type="button" onclick="goTo('screen-dashboard')">← Retour au dashboard</button>
   </div>
+
+  <div class="ranking-list" id="final-ranking"></div>
 
   </div>
 </div>
