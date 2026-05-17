@@ -266,32 +266,56 @@ function setText(id, text) {
 export function renderReveal(lobby) {
   const list = document.getElementById('vote-reveal-list');
   const avgEl = document.getElementById('avg-animated');
+  const subEl = document.getElementById('reveal-sub');
+  const overlayActive = document.getElementById('reveal-overlay')?.classList.contains('active');
   if (!list || !lobby) return;
 
   const perf = getCurrentPerformance(lobby);
   if (!perf) return;
 
   const votes = getPerformanceVotes(lobby, perf.id);
-  const members = getLobbyMembers(lobby);
-  const byUser = Object.fromEntries(members.map((m) => [m.id, m]));
+  const voteByUser = Object.fromEntries(votes.map((v) => [v.userId, v]));
+  const memberById = Object.fromEntries(getLobbyMembers(lobby).map((m) => [m.id, m]));
+  const members = (lobby.memberIds || []).map((id) => memberById[id]).filter(Boolean);
   const avg = computeAverage(votes);
 
-  list.innerHTML = votes
-    .map((v, i) => {
-      const m = byUser[v.userId];
-      const cls = scoreClass(v.score);
-      return `<div class="vote-reveal-item" style="animation-delay:${0.1 + i * 0.2}s">
-        <div class="reveal-user">
-          <div class="reveal-avatar">${m?.avatar || '?'}</div>
-          <div class="reveal-name">${escapeHtml(m?.pseudo || 'Inconnu')}</div>
-        </div>
-        <div class="reveal-score ${cls}">${formatScore(v.score)}</div>
-      </div>`;
-    })
-    .join('');
+  if (subEl) {
+    const voteLabel = votes.length > 1 ? 'votes' : 'vote';
+    subEl.textContent = `${perf.flag} ${perf.country} · ${votes.length}/${members.length} ${voteLabel}`;
+  }
+
+  if (members.length === 0) {
+    list.innerHTML = '<p class="reveal-empty">Aucun membre dans le lobby.</p>';
+  } else {
+    list.innerHTML = members
+      .map((m, i) => {
+        const v = voteByUser[m.id];
+        const delay = 0.1 + i * 0.15;
+        if (!v) {
+          return `<div class="vote-reveal-item vote-reveal-item--pending" style="animation-delay:${delay}s">
+            <div class="reveal-user">
+              <div class="reveal-avatar">${m.avatar || '?'}</div>
+              <div class="reveal-name">${escapeHtml(m.pseudo)}</div>
+            </div>
+            <div class="reveal-score pending">Pas voté</div>
+          </div>`;
+        }
+        const cls = scoreClass(v.score);
+        return `<div class="vote-reveal-item" style="animation-delay:${delay}s">
+          <div class="reveal-user">
+            <div class="reveal-avatar">${m.avatar || '?'}</div>
+            <div class="reveal-name">${escapeHtml(m.pseudo)}</div>
+          </div>
+          <div class="reveal-score ${cls}">${formatScore(v.score)}</div>
+        </div>`;
+      })
+      .join('');
+  }
 
   if (avgEl) {
-    animateCounter(avgEl, avg);
+    if (!votes.length) avgEl.textContent = '—';
+    else if (overlayActive) animateCounter(avgEl, avg);
+    else avgEl.textContent = formatAvg(avg);
   }
 }
 

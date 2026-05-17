@@ -488,8 +488,9 @@ export function castVote(el, val) {
 
 export function showReveal() {
   setRevealed();
-  renderReveal(getLobby());
   document.getElementById('reveal-overlay')?.classList.add('active');
+  renderReveal(getLobby());
+  refresh();
 }
 
 export function hideReveal() {

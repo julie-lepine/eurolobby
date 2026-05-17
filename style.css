@@ -1191,7 +1191,11 @@ body {
   display: none;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 40px 0 32px;
   animation: revealIn 0.5s ease-out;
 }
 @keyframes revealIn {
@@ -1219,8 +1223,9 @@ body {
 .reveal-sub {
   color: var(--muted);
   font-size: 15px;
-  margin-bottom: 40px;
+  margin-bottom: 24px;
   text-align: center;
+  padding: 0 20px;
 }
 
 .vote-reveal-list {
@@ -1230,6 +1235,13 @@ body {
   flex-direction: column;
   gap: 10px;
   padding: 0 20px;
+  flex-shrink: 0;
+}
+.reveal-empty {
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 16px 20px;
 }
 .vote-reveal-item {
   display: flex;
@@ -1276,6 +1288,15 @@ body {
 }
 .reveal-score.zero {
   color: var(--muted);
+}
+.reveal-score.pending {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted2);
+}
+.vote-reveal-item--pending {
+  opacity: 0.65;
+  border-style: dashed;
 }
 
 .reveal-avg {
