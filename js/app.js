@@ -621,6 +621,10 @@ function previewCreateCode() {
 }
 
 function bindConfirmModal() {
+  const modal = document.getElementById('confirm-modal');
+  modal?.classList.remove('active');
+  modal?.setAttribute('aria-hidden', 'true');
+
   document.getElementById('confirm-modal-ok')?.addEventListener('click', () => closeConfirm(true));
   document.getElementById('confirm-modal-cancel')?.addEventListener('click', () => closeConfirm(false));
   document.getElementById('confirm-modal-backdrop')?.addEventListener('click', () => closeConfirm(false));

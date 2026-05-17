@@ -1798,19 +1798,13 @@ body {
   position: fixed;
   inset: 0;
   z-index: 1100;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   padding: 24px;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.25s, visibility 0.25s;
 }
 .confirm-modal.active {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
+  display: flex;
 }
 .confirm-modal-backdrop {
   position: absolute;
