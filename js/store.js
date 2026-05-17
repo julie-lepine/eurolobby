@@ -30,6 +30,12 @@ export function setUserLobbiesCache(lobbies) {
   userLobbiesCache = lobbies || [];
 }
 
+export function removeLobbyFromCaches(lobbyId) {
+  if (lobbyCache?.id === lobbyId) lobbyCache = null;
+  userLobbiesCache = userLobbiesCache.filter((l) => l.id !== lobbyId);
+  window.dispatchEvent(new CustomEvent('eurolobby:update'));
+}
+
 export function loadDb() {
   try {
     const raw = localStorage.getItem(DB_KEY);

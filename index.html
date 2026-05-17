@@ -291,7 +291,7 @@
 </div>
 
 <!-- SCREEN: LIVE VOTE -->
-<div class="screen" id="screen-vote" style="position:relative">
+<div class="screen vote-screen" id="screen-vote">
   <div class="reveal-overlay" id="reveal-overlay">
     <div class="reveal-title">⚡ Révélation !</div>
     <div class="reveal-sub">Les votes du lobby apparaissent...</div>
@@ -312,7 +312,9 @@
       <div style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-top:2px" id="vote-lobby-name">Lobby</div>
     </div>
     <div class="lobby-members" id="lobby-members"></div>
+  </div>
 
+  <div class="vote-body">
   <div class="country-card">
     <div class="country-flag-bg" id="country-flag-bg">🇮🇹</div>
     <div class="country-inner">
@@ -328,7 +330,7 @@
   <div class="timer-area">
     <div class="timer-display">
       <div class="timer-label">⏱ TEMPS RESTANT</div>
-      <div class="timer-value" id="timer-display">3:00</div>
+      <div class="timer-value" id="vote-timer-value">3:00</div>
     </div>
     <div class="progress-bar">
       <div class="progress-fill" id="progress-fill" style="width:100%"></div>
@@ -342,13 +344,13 @@
   <div id="vote-section">
     <div style="padding:20px 20px 8px;font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--muted)">TON VOTE</div>
     <div class="vote-buttons" id="vote-buttons">
-      <div class="vote-btn neg" onclick="castVote(this, -3)">-3</div>
-      <div class="vote-btn neg" onclick="castVote(this, -2)">-2</div>
-      <div class="vote-btn neg" onclick="castVote(this, -1)">-1</div>
-      <div class="vote-btn neutral" onclick="castVote(this, 0)">0</div>
-      <div class="vote-btn pos" onclick="castVote(this, 1)">+1</div>
-      <div class="vote-btn pos" onclick="castVote(this, 2)">+2</div>
-      <div class="vote-btn pos" onclick="castVote(this, 3)">+3</div>
+      <div class="vote-btn neg" data-score="-3" onclick="castVote(this, -3)">-3</div>
+      <div class="vote-btn neg" data-score="-2" onclick="castVote(this, -2)">-2</div>
+      <div class="vote-btn neg" data-score="-1" onclick="castVote(this, -1)">-1</div>
+      <div class="vote-btn neutral" data-score="0" onclick="castVote(this, 0)">0</div>
+      <div class="vote-btn pos" data-score="1" onclick="castVote(this, 1)">+1</div>
+      <div class="vote-btn pos" data-score="2" onclick="castVote(this, 2)">+2</div>
+      <div class="vote-btn pos" data-score="3" onclick="castVote(this, 3)">+3</div>
     </div>
 
     <div class="vote-confirmed" id="vote-confirmed">
@@ -364,6 +366,7 @@
   </div>
 
   <div class="spacer" style="height:20px"></div>
+  </div>
 </div>
 
 <!-- SCREEN: RESULTS -->

@@ -71,12 +71,19 @@ export function renderLobbyLists(userId) {
                 ? `${l.memberIds.length} membres · Prestation ${l.currentPerformanceIndex + 1}/${l.performances.length}`
                 : `${l.memberIds.length} membres · En attente`;
             const target = l.status === 'live' ? 'enterLobbyVote' : 'enterLobbyWaiting';
-            return `<div class="lobby-card" onclick="${target}('${l.id}')">
+            const del =
+              l.adminId === userId
+                ? `<button type="button" class="lobby-delete-btn" onclick="deleteLobbyById('${l.id}', event)" title="Supprimer le lobby" aria-label="Supprimer">🗑</button>`
+                : '';
+            return `<div class="lobby-card">
+              <div class="lobby-card-body" onclick="${target}('${l.id}')">
               <div class="lobby-card-top">
                 <div class="lobby-card-name">${escapeHtml(l.name)}</div>
                 ${badge}
               </div>
               <div class="lobby-meta">${meta}</div>
+              </div>
+              ${del}
             </div>`;
           })
           .join('');
@@ -91,12 +98,19 @@ export function renderLobbyLists(userId) {
             const wText = winner
               ? `${winner.perf.flag} ${winner.perf.country} · ${formatAvg(winner.avg)}`
               : '—';
+            const del =
+              l.adminId === userId
+                ? `<button type="button" class="lobby-delete-btn" onclick="deleteLobbyById('${l.id}', event)" title="Supprimer le lobby" aria-label="Supprimer">🗑</button>`
+                : '';
             return `<div class="lobby-card">
-              <div class="lobby-card-top">
-                <div class="lobby-card-name">${escapeHtml(l.name)}</div>
-                <div class="lobby-badge badge-done">✅ Terminé</div>
+              <div class="lobby-card-body">
+                <div class="lobby-card-top">
+                  <div class="lobby-card-name">${escapeHtml(l.name)}</div>
+                  <div class="lobby-badge badge-done">✅ Terminé</div>
+                </div>
+                <div class="lobby-meta">${l.memberIds.length} membres · Vainqueur: ${wText}</div>
               </div>
-              <div class="lobby-meta">${l.memberIds.length} membres · Vainqueur: ${wText}</div>
+              ${del}
             </div>`;
           })
           .join('');

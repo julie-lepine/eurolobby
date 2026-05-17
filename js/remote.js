@@ -147,13 +147,18 @@ export async function fetchUserLobbies(userId) {
     .filter((l) => l?.memberIds?.includes(userId));
 }
 
+export async function deleteLobbyById(lobbyId) {
+  const { error } = await supabase.from('lobbies').delete().eq('id', lobbyId);
+  if (error) throw error;
+}
+
 export async function isCodeTaken(code) {
   const { data, error } = await supabase.from('lobbies').select('id').eq('code', code).maybeSingle();
   if (error) throw error;
   return Boolean(data);
 }
 
-export function subscribeToLobby(lobbyId, onUpdate) {
+export function subscribeToLobby(lobbyId, onUpdate, onDeleted) {
   const channel = supabase
     .channel(`lobby:${lobbyId}`)
     .on(
@@ -161,6 +166,13 @@ export function subscribeToLobby(lobbyId, onUpdate) {
       { event: 'UPDATE', schema: 'public', table: 'lobbies', filter: `id=eq.${lobbyId}` },
       (payload) => {
         if (payload.new?.payload) onUpdate(payload.new.payload);
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'lobbies', filter: `id=eq.${lobbyId}` },
+      () => {
+        if (onDeleted) onDeleted();
       }
     )
     .subscribe();

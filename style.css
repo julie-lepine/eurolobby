@@ -537,16 +537,42 @@ body {
 
 .lobby-card {
   margin: 0 20px 12px;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
   background: var(--card);
   border-radius: var(--r2);
   border: 1px solid var(--border);
-  padding: 16px 20px;
-  cursor: pointer;
+  padding: 12px 12px 12px 20px;
   transition: all 0.2s;
 }
 .lobby-card:hover {
   border-color: var(--border2);
   transform: translateY(-2px);
+}
+.lobby-card-body {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.lobby-delete-btn {
+  flex-shrink: 0;
+  align-self: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--r1);
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.lobby-delete-btn:hover {
+  border-color: rgba(255, 64, 129, 0.4);
+  color: var(--pink);
+  background: rgba(255, 64, 129, 0.08);
 }
 .lobby-card-top {
   display: flex;
@@ -890,6 +916,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
+}
+.vote-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .performance-num {
   font-size: 12px;
@@ -899,7 +932,8 @@ body {
 }
 .lobby-members {
   display: flex;
-  gap: -4px;
+  gap: 0;
+  flex-shrink: 0;
 }
 .member-dot {
   width: 28px;

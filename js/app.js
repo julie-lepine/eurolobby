@@ -29,6 +29,7 @@ import {
   isAdmin,
   getCurrentPerformance,
   getLobbyMembers,
+  deleteLobby,
 } from './lobby.js';
 import { renderAll, renderReveal, renderCreatePreview } from './render.js';
 
@@ -79,13 +80,29 @@ function setupLobbyRealtime(lobbyId) {
     unsubscribeLobby = null;
   }
   if (!isRemoteMode() || !lobbyId) return;
-  unsubscribeLobby = subscribeToLobby(lobbyId, (lobby) => {
-    setLobbyCache(lobby);
-    const user = getCurrentUser();
-    renderAll(lobby, user);
-    syncTimerFromLobby(lobby);
-    syncScreenFromLobby(lobby);
-  });
+  unsubscribeLobby = subscribeToLobby(
+    lobbyId,
+    (lobby) => {
+      setLobbyCache(lobby);
+      const user = getCurrentUser();
+      renderAll(lobby, user);
+      syncTimerFromLobby(lobby);
+      syncScreenFromLobby(lobby);
+    },
+    () => {
+      const session = getSession();
+      if (session?.lobbyId !== lobbyId) return;
+      setSession({ ...session, lobbyId: null });
+      setLobbyCache(null);
+      if (unsubscribeLobby) {
+        unsubscribeLobby();
+        unsubscribeLobby = null;
+      }
+      showToast('Ce lobby a été supprimé.');
+      goTo('screen-dashboard');
+      refresh();
+    }
+  );
 }
 
 function showToast(msg) {
@@ -256,6 +273,47 @@ export async function joinLobbyAndGo() {
   goTo(result.lobby.status === 'live' ? 'screen-vote' : 'screen-waiting');
 }
 
+export async function deleteLobbyById(lobbyId, event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+  const user = getCurrentUser();
+  if (!user?.id) {
+    showToast('Connecte-toi pour supprimer un lobby.');
+    return;
+  }
+  let lobby = getUserLobbies(user.id).find((l) => l.id === lobbyId);
+  if (!lobby && isRemoteMode()) {
+    await hydrateLobby(lobbyId);
+    lobby = getCurrentLobby();
+  }
+  if (!lobby) {
+    showToast('Lobby introuvable.');
+    return;
+  }
+  if (!confirm(`Supprimer définitivement « ${lobby.name} » ? Cette action est irréversible.`)) {
+    return;
+  }
+  try {
+    const result = await deleteLobby(lobbyId);
+    if (!result.ok) {
+      showToast(result.error);
+      return;
+    }
+    if (unsubscribeLobby) {
+      unsubscribeLobby();
+      unsubscribeLobby = null;
+    }
+    showToast(`Lobby « ${result.name} » supprimé.`);
+    await refresh();
+    goTo('screen-dashboard');
+  } catch (err) {
+    console.error('deleteLobby', err);
+    showToast('Impossible de supprimer le lobby.');
+  }
+}
+
 export async function enterLobbyWaiting(lobbyId) {
   setSession({ ...getSession(), lobbyId });
   await hydrateLobby(lobbyId);
@@ -412,7 +470,7 @@ function updateTimerDisplay(timerSecs) {
   const pct = (timerSecs / VOTE_DURATION) * 100;
 
   [
-    { el: document.getElementById('timer-display'), fill: document.getElementById('progress-fill') },
+    { el: document.getElementById('vote-timer-value'), fill: document.getElementById('progress-fill') },
     { el: document.getElementById('admin-timer-display'), fill: document.getElementById('admin-progress-fill') },
   ].forEach(({ el, fill }) => {
     if (!el || !fill) return;
@@ -532,7 +590,7 @@ function exposeGlobals() {
     createLobbyAndGo, joinLobbyAndGo, enterLobbyWaiting, enterLobbyVote,
     toggleReady, adminStart, adminStop, adminNext, adminReset, resultsNext,
     castVote, showReveal, hideReveal, copyInviteCode, sendChat, exportPdf,
-    shareResults, logout: logoutUser, previewCreateCode,
+    shareResults, logout: logoutUser, previewCreateCode, deleteLobbyById,
   };
   Object.assign(window, fns);
 }

@@ -39,6 +39,7 @@ drop policy if exists "profiles_insert" on public.profiles;
 drop policy if exists "profiles_update" on public.profiles;
 drop policy if exists "lobbies_select" on public.lobbies;
 drop policy if exists "lobbies_insert" on public.lobbies;
+drop policy if exists "lobbies_delete" on public.lobbies;
 drop policy if exists "lobbies_update" on public.lobbies;
 
 create policy "profiles_select" on public.profiles for select using (true);
@@ -48,6 +49,7 @@ create policy "profiles_update" on public.profiles for update using (true);
 create policy "lobbies_select" on public.lobbies for select using (true);
 create policy "lobbies_insert" on public.lobbies for insert with check (true);
 create policy "lobbies_update" on public.lobbies for update using (true);
+create policy "lobbies_delete" on public.lobbies for delete using (true);
 
 -- Realtime sur les mises à jour de lobby (idempotent si déjà activé)
 do $$

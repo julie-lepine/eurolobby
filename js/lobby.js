@@ -9,13 +9,16 @@ import {
   getCurrentLobby,
   isUsingRemote,
   setLobbyCache,
-  setUserLobbiesCache,
+  removeLobbyFromCaches,
+  refreshUserLobbies,
 } from './store.js';
 import {
   isRemoteMode,
   insertLobby,
   saveLobby,
   fetchLobbyByCode,
+  fetchLobbyById,
+  deleteLobbyById,
   isCodeTaken,
 } from './remote.js';
 
@@ -279,4 +282,43 @@ export function isVoteOpen(lobby) {
 
 export function isAdmin(lobby, userId) {
   return lobby?.adminId === userId;
+}
+
+export async function deleteLobby(lobbyId) {
+  const user = getCurrentUser();
+  if (!user?.id) return { ok: false, error: 'Connecte-toi pour supprimer un lobby.' };
+
+  let lobby = null;
+  if (isRemoteMode()) {
+    const current = getCurrentLobby();
+    lobby =
+      current?.id === lobbyId
+        ? current
+        : (await fetchLobbyById(lobbyId)) || null;
+  } else {
+    lobby = loadDb().lobbies.find((l) => l.id === lobbyId) || null;
+  }
+
+  if (!lobby) return { ok: false, error: 'Lobby introuvable.' };
+  if (lobby.adminId !== user.id) {
+    return { ok: false, error: 'Seul l\'admin peut supprimer ce lobby.' };
+  }
+
+  if (isRemoteMode()) {
+    await deleteLobbyById(lobbyId);
+    removeLobbyFromCaches(lobbyId);
+    await refreshUserLobbies(user.id);
+  } else {
+    const db = loadDb();
+    db.lobbies = db.lobbies.filter((l) => l.id !== lobbyId);
+    saveDb(db);
+  }
+
+  const session = getSession();
+  if (session?.lobbyId === lobbyId) {
+    setSession({ ...session, lobbyId: null });
+    setLobbyCache(null);
+  }
+
+  return { ok: true, name: lobby.name };
 }
