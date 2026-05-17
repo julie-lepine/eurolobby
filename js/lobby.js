@@ -85,7 +85,7 @@ export async function createLobby({ name, maxPlayers, isPrivate, dramaticReveal 
   const lobby = {
     id: uid(),
     code,
-    name: name?.trim() || 'Soirée Eurovision 2025 🎤',
+    name: name?.trim() || 'Soirée Eurovision 2027 🎤',
     maxPlayers: Math.min(50, Math.max(2, Number(maxPlayers) || 10)),
     isPrivate: !!isPrivate,
     dramaticReveal: dramaticReveal !== false,

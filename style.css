@@ -996,13 +996,19 @@ button.quick-btn {
 .country-flag-bg {
   position: absolute;
   inset: 0;
-  font-size: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.08;
-  filter: blur(8px);
   z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.country-flag-bg .flag-icon--bg {
+  width: min(220px, 90%);
+  height: auto;
+  opacity: 0.18;
+  filter: blur(6px);
+  object-fit: cover;
 }
 .country-inner {
   position: relative;
@@ -1013,8 +1019,63 @@ button.quick-btn {
   gap: 16px;
 }
 .country-flag {
-  font-size: 52px;
-  line-height: 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flag-icon {
+  display: block;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.15);
+}
+.flag-icon--lg {
+  width: 80px;
+  height: 60px;
+}
+.flag-icon--rank {
+  width: 48px;
+  height: 36px;
+}
+.flag-icon--podium {
+  width: 56px;
+  height: 42px;
+}
+.flag-icon--admin,
+.flag-icon--admin-sm {
+  width: 40px;
+  height: 30px;
+}
+.flag-icon--score {
+  width: 56px;
+  height: 42px;
+}
+.flag-icon--inline {
+  width: 32px;
+  height: 24px;
+  vertical-align: middle;
+  display: inline-block;
+  margin-right: 6px;
+}
+.rank-flag,
+.podium-flag,
+.admin-perf-flag-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+#results-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+#admin-perf-flag {
+  display: flex;
+  align-items: center;
 }
 .country-info {
   flex: 1;
@@ -1479,7 +1540,7 @@ button.quick-btn {
   color: #a1887f;
 }
 .rank-flag {
-  font-size: 24px;
+  width: 52px;
 }
 .rank-country {
   flex: 1;

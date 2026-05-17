@@ -35,9 +35,51 @@ export function scoreClass(n) {
 }
 
 export async function loadCountries() {
-  const url = `${import.meta.env.BASE_URL}data/countries-2025.json`;
+  const url = `${import.meta.env.BASE_URL}data/countries-2027.json`;
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error('Impossible de charger le catalogue pays');
   const data = await res.json();
   return data.slice(0, PERFORMANCE_COUNT);
+}
+
+/** URL image drapeau (PNG) à partir du code ISO (FR, GB…). */
+export function getFlagUrl(code, width = 80) {
+  if (!code) return '';
+  return `https://flagcdn.com/w${width}/${String(code).toLowerCase()}.png`;
+}
+
+/** Affiche un drapeau image dans un conteneur ; emoji si chargement impossible. */
+export function applyPerformanceFlag(el, perf, { width = 80, className = 'flag-icon' } = {}) {
+  if (!el || !perf) return;
+  el.textContent = '';
+  if (perf.code) {
+    const img = document.createElement('img');
+    img.className = className;
+    img.src = getFlagUrl(perf.code, width);
+    img.alt = perf.country || '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.addEventListener(
+      'error',
+      () => {
+        el.textContent = perf.flag || '🏳️';
+      },
+      { once: true }
+    );
+    el.appendChild(img);
+  } else {
+    el.textContent = perf.flag || '🏳️';
+  }
+}
+
+/** HTML drapeau pour listes / templates. */
+export function flagImgHtml(perf, { width = 80, className = 'flag-icon' } = {}) {
+  if (!perf?.code) return perf?.flag || '🏳️';
+  const url = getFlagUrl(perf.code, width);
+  const alt = String(perf.country || perf.code)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
+  const emoji = perf.flag || '🏳️';
+  return `<img class="${className}" src="${url}" alt="${alt}" width="${width}" height="${Math.round(width * 0.75)}" loading="lazy" decoding="async" onerror="this.replaceWith(document.createTextNode('${emoji}'))">`;
 }

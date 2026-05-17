@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Ouvre `http://localhost:5173` (Vite sert les modules ES et le catalogue `data/countries-2025.json`).
+Ouvre `http://localhost:5173` (Vite sert les modules ES et le catalogue `data/countries-2027.json`).
 
 > Ouvrir `index.html` directement (`file://`) ne fonctionne pas : les modules et `fetch` nécessitent un serveur HTTP.
 
@@ -21,7 +21,7 @@ Ouvre `http://localhost:5173` (Vite sert les modules ES et le catalogue `data/co
 | Mode invité (pseudo) pour rejoindre | ✅ |
 | Création lobby + code généré | ✅ |
 | Rejoindre par code | ✅ |
-| Catalogue 37 pays 2025 | ✅ |
+| Catalogue 25 pays Eurovision 2027 | ✅ |
 | Votes −3…+3 enregistrés | ✅ |
 | Moyennes, distribution, classement | ✅ |
 | Timer 3 min + révélation auto à 15 s | ✅ |
@@ -41,7 +41,7 @@ js/
   render.js       — rendu dynamique des écrans
   utils.js
 data/
-  countries-2025.json
+  countries-2027.json
 ```
 
 ## Supabase (multijoueur en ligne)

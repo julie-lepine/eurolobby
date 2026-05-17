@@ -1,4 +1,12 @@
-import { SCORES, formatAvg, formatScore, scoreClass, REVEAL_THRESHOLD } from './utils.js';
+import {
+  SCORES,
+  formatAvg,
+  formatScore,
+  scoreClass,
+  REVEAL_THRESHOLD,
+  applyPerformanceFlag,
+  flagImgHtml,
+} from './utils.js';
 import {
   getCurrentPerformance,
   getLobbyMembers,
@@ -240,8 +248,14 @@ export function renderVoteScreen(lobby, user) {
   if (lobbyName) lobbyName.textContent = lobby.name;
 
   if (perf) {
-    setText('country-flag-bg', perf.flag);
-    setText('country-flag', perf.flag);
+    applyPerformanceFlag(document.getElementById('country-flag'), perf, {
+      width: 80,
+      className: 'flag-icon flag-icon--lg',
+    });
+    applyPerformanceFlag(document.getElementById('country-flag-bg'), perf, {
+      width: 200,
+      className: 'flag-icon flag-icon--bg',
+    });
     setText('country-name', perf.country);
     setText('artist-name', perf.artist);
     setText('song-name', `♪ ${perf.song}`);
@@ -362,8 +376,12 @@ export function renderResults(lobby) {
   const dist = computeDistribution(votes);
   const { min, max } = getMinMaxVoters(votes, members);
 
-  setText('results-title', `${perf.flag} ${perf.country}`);
-  setText('results-score-flag', perf.flag);
+  const resultsTitle = document.getElementById('results-title');
+  if (resultsTitle) {
+    resultsTitle.innerHTML = `${flagImgHtml(perf, { width: 40, className: 'flag-icon flag-icon--inline' })} ${escapeHtml(perf.country)}`;
+  }
+  const resultsScoreFlag = document.getElementById('results-score-flag');
+  if (resultsScoreFlag) applyPerformanceFlag(resultsScoreFlag, perf, { width: 56, className: 'flag-icon flag-icon--score' });
   setText('results-score-big', formatAvg(avg));
   setText('results-best-score', max ? `${formatScore(max.score)} ${max.member?.avatar || ''}` : '—');
   setText('results-best-name', max?.member?.pseudo || '—');
@@ -413,7 +431,7 @@ export function renderResults(lobby) {
           r.perf.id === perf.id ? ' style="border-color:var(--accent);background:rgba(224,64,251,0.06)"' : '';
         return `<div class="ranking-item"${highlight}>
           <div class="rank-num ${rankCls}">${i + 1}</div>
-          <div class="rank-flag">${r.perf.flag}</div>
+          <div class="rank-flag">${flagImgHtml(r.perf, { width: 64, className: 'flag-icon flag-icon--rank' })}</div>
           <div class="rank-country">${escapeHtml(r.perf.country)}${current}</div>
           <div class="rank-score">${formatAvg(r.avg)}</div>
         </div>`;
@@ -435,7 +453,7 @@ export function renderFinal(lobby) {
         const rankCls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
         return `<div class="ranking-item">
           <div class="rank-num ${rankCls}">${i + 1}</div>
-          <div class="rank-flag">${r.perf.flag}</div>
+          <div class="rank-flag">${flagImgHtml(r.perf, { width: 64, className: 'flag-icon flag-icon--rank' })}</div>
           <div class="rank-country">${escapeHtml(r.perf.country)}</div>
           <div class="rank-score">${formatAvg(r.avg)}</div>
         </div>`;
@@ -457,7 +475,7 @@ export function renderFinal(lobby) {
     podium.innerHTML = top3
       .map(
         (r, i) => `<div class="podium-item">
-          <div class="podium-flag" style="--delay:${delays[i]}">${r.perf.flag}</div>
+          <div class="podium-flag" style="--delay:${delays[i]}">${flagImgHtml(r.perf, { width: 96, className: 'flag-icon flag-icon--podium' })}</div>
           <div class="podium-country">${escapeHtml(r.perf.country)}</div>
           <div class="podium-score">${formatAvg(r.avg)}</div>
           <div class="podium-block ${blocks[i]}">${places[i]}</div>
@@ -475,7 +493,7 @@ export function renderAdmin(lobby, user) {
   const name = document.getElementById('admin-perf-name');
   const sub = document.getElementById('admin-perf-sub');
 
-  if (perf && flag) flag.textContent = perf.flag;
+  if (perf && flag) applyPerformanceFlag(flag, perf, { width: 48, className: 'flag-icon flag-icon--admin' });
   if (perf && name) name.textContent = perf.country;
   if (perf && sub) {
     sub.textContent = `${perf.artist} · Prestation ${lobby.currentPerformanceIndex + 1}/${lobby.performances.length}`;
@@ -493,7 +511,7 @@ export function renderAdmin(lobby, user) {
             : `<div class="admin-perf-order">${i + 1}</div>`;
         return `<div class="admin-perf-item${current ? ' current' : ''}">
           ${order}
-          <div style="font-size:20px">${p.flag}</div>
+          <div class="admin-perf-flag-wrap">${flagImgHtml(p, { width: 40, className: 'flag-icon flag-icon--admin-sm' })}</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:600">${escapeHtml(p.country)}</div>
             <div style="font-size:12px;color:var(--muted)">${escapeHtml(p.artist)}${current ? ' · EN COURS' : ''}</div>
