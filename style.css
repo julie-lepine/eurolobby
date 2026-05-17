@@ -1863,10 +1863,10 @@ button.quick-btn {
 .podium-area {
   position: relative;
   z-index: 2;
-  padding: 16px 20px 8px;
-  margin-bottom: 0;
+  padding: 20px 16px 24px;
+  margin: 0 0 12px;
   text-align: center;
-  overflow: hidden;
+  overflow: visible;
   max-width: 100%;
   box-sizing: border-box;
 }
@@ -1885,15 +1885,19 @@ button.quick-btn {
   align-items: flex-end;
   justify-content: center;
   gap: 6px;
-  margin: 12px 0 4px;
+  margin: 12px 0 0;
+  padding-bottom: 4px;
   max-width: 100%;
   box-sizing: border-box;
+  overflow: visible;
 }
 .podium-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  overflow: visible;
+  flex-shrink: 0;
 }
 .podium-flag {
   font-size: 40px;
@@ -1941,18 +1945,21 @@ button.quick-btn {
 }
 .podium-1 {
   background: linear-gradient(180deg, #ffd740, #ff9800);
-  height: clamp(64px, 18vw, 88px);
+  height: clamp(72px, 20vw, 100px);
   color: #fff;
+  flex-shrink: 0;
 }
 .podium-2 {
   background: linear-gradient(180deg, #b0bec5, #78909c);
-  height: clamp(48px, 14vw, 64px);
+  height: clamp(56px, 16vw, 72px);
   color: #fff;
+  flex-shrink: 0;
 }
 .podium-3 {
   background: linear-gradient(180deg, #a1887f, #795548);
-  height: clamp(36px, 10vw, 48px);
+  height: clamp(44px, 12vw, 52px);
   color: #fff;
+  flex-shrink: 0;
 }
 
 .final-content .stats-grid {
