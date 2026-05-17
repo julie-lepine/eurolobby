@@ -46,6 +46,7 @@ let timerInterval = null;
 let revealTriggered = false;
 let selectedVote = null;
 let unsubscribeLobby = null;
+let confirmResolve = null;
 
 function getLobby() {
   return getCurrentLobby();
@@ -111,6 +112,44 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function closeConfirm(result) {
+  const modal = document.getElementById('confirm-modal');
+  if (!modal) return;
+  modal.classList.remove('active');
+  modal.setAttribute('aria-hidden', 'true');
+  if (confirmResolve) {
+    confirmResolve(result);
+    confirmResolve = null;
+  }
+}
+
+function showConfirm({
+  title = 'Confirmer',
+  message = '',
+  confirmText = 'Confirmer',
+  cancelText = 'Annuler',
+}) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('confirm-modal');
+    const titleEl = document.getElementById('confirm-modal-title');
+    const messageEl = document.getElementById('confirm-modal-message');
+    const okBtn = document.getElementById('confirm-modal-ok');
+    const cancelBtn = document.getElementById('confirm-modal-cancel');
+    if (!modal || !titleEl || !messageEl || !okBtn || !cancelBtn) {
+      resolve(false);
+      return;
+    }
+    confirmResolve = resolve;
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    okBtn.textContent = confirmText;
+    cancelBtn.textContent = cancelText;
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    okBtn.focus();
+  });
 }
 
 function showAuthError(elId, msg) {
@@ -292,9 +331,13 @@ export async function deleteLobbyById(lobbyId, event) {
     showToast('Lobby introuvable.');
     return;
   }
-  if (!confirm(`Supprimer définitivement « ${lobby.name} » ? Cette action est irréversible.`)) {
-    return;
-  }
+  const confirmed = await showConfirm({
+    title: 'Supprimer le lobby ?',
+    message: `Supprimer définitivement « ${lobby.name} » ? Cette action est irréversible.`,
+    confirmText: 'Supprimer',
+    cancelText: 'Annuler',
+  });
+  if (!confirmed) return;
   try {
     const result = await deleteLobby(lobbyId);
     if (!result.ok) {
@@ -561,7 +604,19 @@ function previewCreateCode() {
   renderCreatePreview('······');
 }
 
+function bindConfirmModal() {
+  document.getElementById('confirm-modal-ok')?.addEventListener('click', () => closeConfirm(true));
+  document.getElementById('confirm-modal-cancel')?.addEventListener('click', () => closeConfirm(false));
+  document.getElementById('confirm-modal-backdrop')?.addEventListener('click', () => closeConfirm(false));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('confirm-modal')?.classList.contains('active')) {
+      closeConfirm(false);
+    }
+  });
+}
+
 function bindEvents() {
+  bindConfirmModal();
   document.getElementById('chat-input')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendChat();
   });
