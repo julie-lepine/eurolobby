@@ -9,6 +9,8 @@ import {
   hydrateLobby,
   refreshUserLobbies,
   setLobbyCache,
+  getLobbyCache,
+  ensureLobbyCache,
   applyLobbyNormalization,
 } from './store.js';
 import { signup, login, loginAsGuest, requireAuth, restoreSession, logout } from './auth.js';
@@ -32,7 +34,7 @@ import {
   getLobbyMembers,
   deleteLobby,
 } from './lobby.js';
-import { renderAll, renderReveal, renderCreatePreview } from './render.js';
+import { renderAll, renderReveal, renderCreatePreview, markChatScrollForce } from './render.js';
 
 const BOTTOM_NAV_SCREENS = [
   'screen-dashboard',
@@ -45,7 +47,7 @@ const BOTTOM_NAV_SCREENS = [
 
 let timerInterval = null;
 let revealTriggered = false;
-let selectedVote = null;
+let lastVotePerfId = null;
 let unsubscribeLobby = null;
 let confirmResolve = null;
 
@@ -67,14 +69,18 @@ function syncScreenFromLobby(lobby) {
 
 async function refresh() {
   const user = getCurrentUser();
+  const session = getSession();
   if (isUsingRemote() && user?.id) {
     await refreshUserLobbies(user.id);
+    if (session?.lobbyId && !getLobby()) {
+      await hydrateLobby(session.lobbyId);
+    }
   }
   let lobby = getLobby();
   if (lobby) {
     lobby = await applyLobbyNormalization(lobby);
   }
-  renderAll(lobby, user);
+  renderAll(lobby);
   syncTimerFromLobby(lobby);
   syncScreenFromLobby(lobby);
 }
@@ -88,12 +94,10 @@ function setupLobbyRealtime(lobbyId) {
   unsubscribeLobby = subscribeToLobby(
     lobbyId,
     async (lobby) => {
-      await applyLobbyNormalization(lobby);
-      const current = getLobby();
-      const user = getCurrentUser();
-      renderAll(current, user);
-      syncTimerFromLobby(current);
-      syncScreenFromLobby(current);
+      const normalized = await applyLobbyNormalization(lobby, { persist: false });
+      if (normalized && normalized !== getLobbyCache()) {
+        setLobbyCache(normalized);
+      }
     },
     () => {
       const session = getSession();
@@ -250,10 +254,11 @@ export function goTo(id) {
 
   if (id === 'screen-final') initConfetti();
   if (id === 'screen-vote') {
-    resetVoteUI();
+    resetVoteUIIfNeeded(getLobby());
     startTimerLoop();
-  } else if (id !== 'screen-results') {
-    hideReveal();
+  } else {
+    stopVoteTimer();
+    if (id !== 'screen-results') hideReveal();
   }
 
   if (id === 'screen-dashboard' || id === 'screen-waiting' || id === 'screen-vote' || id === 'screen-results' || id === 'screen-final' || id === 'screen-admin') {
@@ -446,14 +451,19 @@ export async function enterLobbyVote(lobbyId) {
   goTo('screen-vote');
 }
 
-export function toggleReady() {
-  const lobby = getLobby();
+export async function toggleReady() {
   const user = getCurrentUser();
-  if (!lobby || !user) return;
+  const session = getSession();
+  if (!user || !session?.lobbyId) return;
+  if (isRemoteMode()) await ensureLobbyCache(session.lobbyId);
+  const lobby = getLobby();
+  if (!lobby) {
+    showToast('Lobby introuvable.');
+    return;
+  }
   const next = !lobby.ready[user.id];
   setReady(next);
   showToast(next ? 'Tu es prêt !' : 'Prêt annulé');
-  refresh();
 }
 
 export function adminStart() {
@@ -491,16 +501,24 @@ export function adminNext() {
   } else {
     showToast('Prestation suivante !');
     hideReveal();
+    lastVotePerfId = null;
     goTo('screen-vote');
   }
 }
 
-export function adminReset() {
+export async function adminReset() {
   const lobby = getLobby();
   const user = getCurrentUser();
   if (!isAdmin(lobby, user?.id)) return;
-  if (!confirm('Réinitialiser toute la session ?')) return;
+  const confirmed = await showConfirm({
+    title: 'Réinitialiser la session ?',
+    message: 'Tous les votes et le chat seront effacés. Cette action est irréversible.',
+    confirmText: 'Réinitialiser',
+    cancelText: 'Annuler',
+  });
+  if (!confirmed) return;
   resetLobby();
+  lastVotePerfId = null;
   showToast('Session réinitialisée');
   goTo('screen-waiting');
 }
@@ -516,49 +534,67 @@ export function resultsNext() {
 }
 
 function resetVoteUI() {
-  selectedVote = null;
   document.querySelectorAll('.vote-btn').forEach((b) => b.classList.remove('selected'));
   document.getElementById('vote-confirmed')?.classList.remove('show');
 }
 
-export function castVote(el, val) {
+function resetVoteUIIfNeeded(lobby) {
+  const perf = getCurrentPerformance(lobby);
+  const perfId = perf?.id ?? null;
+  if (perfId === lastVotePerfId) return;
+  lastVotePerfId = perfId;
+  resetVoteUI();
+}
+
+export async function castVote(el, val) {
   const lobby = getLobby();
   if (!isVoteOpen(lobby)) {
     showToast('Le vote est fermé');
     return;
   }
-  if (lobby.dramaticReveal && getRemainingSeconds(lobby) <= REVEAL_THRESHOLD && !lobby.revealed) {
-    showToast('Révélation imminente — vote fermé');
-    return;
-  }
 
-  const result = submitVote(val);
+  const result = await submitVote(val);
   if (result?.ok === false) {
     showToast(result.error || 'Vote refusé');
     return;
   }
-  document.querySelectorAll('.vote-btn').forEach((b) => b.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedVote = val;
-  setTimeout(() => document.getElementById('vote-confirmed')?.classList.add('show'), 300);
+  document.querySelectorAll('.vote-btn').forEach((b) => {
+    const score = Number(b.dataset.score);
+    b.classList.toggle('selected', score === val);
+  });
+  document.getElementById('vote-confirmed')?.classList.add('show');
   showToast('Vote enregistré');
-  refresh();
 }
 
 export function showReveal() {
   setRevealed();
   document.getElementById('reveal-overlay')?.classList.add('active');
   renderReveal(getLobby());
-  refresh();
 }
 
 export function hideReveal() {
   document.getElementById('reveal-overlay')?.classList.remove('active');
 }
 
+function stopVoteTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
+
+function isVoteScreenActive() {
+  return document.getElementById('screen-vote')?.classList.contains('active');
+}
+
 function startTimerLoop() {
-  clearInterval(timerInterval);
+  stopVoteTimer();
+  if (!isVoteScreenActive()) return;
   timerInterval = setInterval(() => {
+    if (!isVoteScreenActive()) {
+      stopVoteTimer();
+      return;
+    }
     const lobby = getLobby();
     if (!lobby) return;
     const secs = getRemainingSeconds(lobby);
@@ -571,7 +607,7 @@ function startTimerLoop() {
 
     if (secs === 0 && lobby.timerEndsAt) {
       if (!lobby.revealed) showReveal();
-      clearInterval(timerInterval);
+      stopVoteTimer();
     }
   }, 250);
 }
@@ -579,7 +615,7 @@ function startTimerLoop() {
 function syncTimerFromLobby(lobby) {
   if (!lobby?.timerEndsAt) return;
   updateTimerDisplay(getRemainingSeconds(lobby));
-  if (!timerInterval) startTimerLoop();
+  if (isVoteScreenActive() && !timerInterval) startTimerLoop();
 }
 
 function updateTimerDisplay(timerSecs) {
@@ -625,7 +661,7 @@ export function sendChat() {
   if (!text?.trim()) return;
   sendChatMessage(text);
   if (input) input.value = '';
-  refresh();
+  markChatScrollForce();
 }
 
 export function exportPdf() {
@@ -643,6 +679,7 @@ export function shareResults() {
 }
 
 export async function logoutUser() {
+  stopVoteTimer();
   if (unsubscribeLobby) {
     unsubscribeLobby();
     unsubscribeLobby = null;
@@ -706,9 +743,14 @@ function bindEvents() {
   window.addEventListener('storage', (e) => {
     if (e.key === 'eurolobby_db') refresh();
   });
-  window.addEventListener('eurolobby:update', refresh);
+  let refreshTimer = null;
+  window.addEventListener('eurolobby:update', () => {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => refresh(), 50);
+  });
 
   setInterval(() => {
+    if (!isVoteScreenActive()) return;
     const lobby = getLobby();
     if (lobby?.timerEndsAt) syncTimerFromLobby(lobby);
   }, 2000);
@@ -755,10 +797,6 @@ async function initRemote() {
       lobby = await hydrateLobby(session.lobbyId);
       if (lobby) setupLobbyRealtime(session.lobbyId);
     }
-  }
-
-  if (isRemoteMode()) {
-    showToast('Mode en ligne — lobbys partagés');
   }
 
   return { user, lobby };

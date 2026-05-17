@@ -7,15 +7,13 @@ import {
 import { normalizeLobby, lobbyNeedsNormalization } from './lobby-normalize.js';
 
 /** Ramène le lobby au catalogue (25 prestations) et persiste si besoin. */
-export async function applyLobbyNormalization(lobby) {
+export async function applyLobbyNormalization(lobby, { persist = true } = {}) {
   if (!lobby) return null;
   const normalized = await normalizeLobby(lobby);
 
-  if (isRemoteMode() && lobbyCache?.id === normalized.id) {
-    setLobbyCache(normalized);
-  }
+  if (!lobbyNeedsNormalization(lobby, normalized)) return lobby;
 
-  if (!lobbyNeedsNormalization(lobby, normalized)) return normalized;
+  if (!persist) return normalized;
 
   if (isRemoteMode()) {
     await remoteSaveLobby(normalized).catch((err) => console.error('normalize saveLobby', err));
@@ -44,13 +42,18 @@ export function isUsingRemote() {
   return isRemoteMode();
 }
 
+export function getLobbyCache() {
+  return lobbyCache;
+}
+
 export function setUserCache(user) {
   userCache = user;
 }
 
-export function setLobbyCache(lobby) {
+export function setLobbyCache(lobby, { emit = true } = {}) {
+  if (lobbyCache === lobby) return;
   lobbyCache = lobby;
-  window.dispatchEvent(new CustomEvent('eurolobby:update'));
+  if (emit) window.dispatchEvent(new CustomEvent('eurolobby:update'));
 }
 
 export function setUserLobbiesCache(lobbies) {
@@ -110,15 +113,34 @@ export function getCurrentLobby() {
   return db.lobbies.find((l) => l.id === session.lobbyId) || null;
 }
 
+export async function ensureLobbyCache(lobbyId) {
+  if (!isRemoteMode() || !lobbyId) return getCurrentLobby();
+  if (lobbyCache?.id === lobbyId) return lobbyCache;
+  return hydrateLobby(lobbyId);
+}
+
+async function persistLobby(localLobby) {
+  const merged = await remoteSaveLobby(localLobby);
+  if (lobbyCache?.id === merged.id && lobbyCache !== merged) {
+    setLobbyCache(merged, { emit: false });
+  }
+  userLobbiesCache = userLobbiesCache.map((l) => (l.id === merged.id ? merged : l));
+  return merged;
+}
+
 export async function hydrateLobby(lobbyId) {
   if (!isRemoteMode() || !lobbyId) return null;
   const lobby = await fetchLobbyById(lobbyId);
-  if (lobby) {
-    const normalized = await applyLobbyNormalization(lobby);
-    setLobbyCache(normalized);
-    return normalized;
+  if (!lobby) {
+    const session = getSession();
+    if (session?.lobbyId === lobbyId) {
+      setSession({ ...session, lobbyId: null });
+    }
+    return null;
   }
-  return null;
+  const normalized = await applyLobbyNormalization(lobby);
+  setLobbyCache(normalized);
+  return normalized;
 }
 
 export async function refreshUserLobbies(userId) {
@@ -127,9 +149,13 @@ export async function refreshUserLobbies(userId) {
     return userLobbiesCache;
   }
   const list = await remoteFetchUserLobbies(userId);
+  const session = getSession();
+  const activeId = session?.lobbyId || lobbyCache?.id;
   const normalizedList = [];
+
   for (const lobby of list) {
-    normalizedList.push(await applyLobbyNormalization(lobby));
+    const needsPersist = lobby.id === activeId;
+    normalizedList.push(await applyLobbyNormalization(lobby, { persist: needsPersist }));
   }
   userLobbiesCache = normalizedList;
   return normalizedList;
@@ -141,7 +167,7 @@ export function updateLobby(lobbyId, updater) {
     if (!current || current.id !== lobbyId) return null;
     const next = typeof updater === 'function' ? updater({ ...current }) : updater;
     setLobbyCache(next);
-    remoteSaveLobby(next).catch((err) => console.error('saveLobby', err));
+    persistLobby(next).catch((err) => console.error('saveLobby', err));
     return next;
   }
 

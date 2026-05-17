@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase.js';
+import { mergeLobbyPayload } from './lobby-merge.js';
 
 export function isRemoteMode() {
   return isSupabaseConfigured && supabase !== null;
@@ -13,6 +14,16 @@ function mapProfile(row) {
     avatar: row.avatar || '🎤',
     isGuest: row.is_guest,
     createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+  };
+}
+
+function lobbyRow(lobby) {
+  return {
+    id: lobby.id,
+    code: lobby.code,
+    payload: lobby,
+    member_ids: lobby.memberIds || [],
+    updated_at: new Date().toISOString(),
   };
 }
 
@@ -100,27 +111,17 @@ export async function logoutAuth() {
 }
 
 export async function insertLobby(lobby) {
-  const { error } = await supabase.from('lobbies').insert({
-    id: lobby.id,
-    code: lobby.code,
-    payload: lobby,
-    updated_at: new Date().toISOString(),
-  });
+  const { error } = await supabase.from('lobbies').insert(lobbyRow(lobby));
   if (error) throw error;
   return lobby;
 }
 
 export async function saveLobby(lobby) {
-  const { error } = await supabase
-    .from('lobbies')
-    .update({
-      code: lobby.code,
-      payload: lobby,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', lobby.id);
+  const server = await fetchLobbyById(lobby.id);
+  const merged = server ? mergeLobbyPayload(server, lobby) : lobby;
+  const { error } = await supabase.from('lobbies').update(lobbyRow(merged)).eq('id', merged.id);
   if (error) throw error;
-  return lobby;
+  return merged;
 }
 
 export async function fetchLobbyById(id) {
@@ -140,11 +141,22 @@ export async function fetchLobbyByCode(code) {
 }
 
 export async function fetchUserLobbies(userId) {
-  const { data, error } = await supabase.from('lobbies').select('payload').order('updated_at', { ascending: false });
-  if (error) throw error;
-  return (data || [])
-    .map((r) => r.payload)
-    .filter((l) => l?.memberIds?.includes(userId));
+  const { data, error } = await supabase
+    .from('lobbies')
+    .select('payload')
+    .contains('member_ids', [userId])
+    .order('updated_at', { ascending: false });
+  if (error) {
+    const { data: fallback, error: err2 } = await supabase
+      .from('lobbies')
+      .select('payload')
+      .order('updated_at', { ascending: false });
+    if (err2) throw err2;
+    return (fallback || [])
+      .map((r) => r.payload)
+      .filter((l) => l?.memberIds?.includes(userId));
+  }
+  return (data || []).map((r) => r.payload);
 }
 
 export async function deleteLobbyById(lobbyId) {

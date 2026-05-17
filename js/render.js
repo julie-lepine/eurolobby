@@ -17,6 +17,12 @@ import {
   computeLobbyStats,
 } from './vote-engine.js';
 
+let chatScrollForce = false;
+
+export function markChatScrollForce() {
+  chatScrollForce = true;
+}
+
 const AVATAR_BGS = [
   'rgba(105,240,174,0.1)',
   'rgba(224,64,251,0.1)',
@@ -204,6 +210,7 @@ export function renderWaitingRoom(lobby, user) {
 export function renderChat(lobby) {
   const box = document.getElementById('chat-msgs');
   if (!box) return;
+  const wasNearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 48;
   box.innerHTML = lobby.chat
     .map(
       (m) => `<div class="chat-msg">
@@ -212,7 +219,10 @@ export function renderChat(lobby) {
       </div>`
     )
     .join('');
-  box.scrollTop = box.scrollHeight;
+  if (chatScrollForce || wasNearBottom) {
+    box.scrollTop = box.scrollHeight;
+    chatScrollForce = false;
+  }
 }
 
 export function renderVoteScreen(lobby, user) {
@@ -252,11 +262,18 @@ export function renderVoteScreen(lobby, user) {
   if (demoBtn) demoBtn.style.display = lobby.dramaticReveal ? 'none' : '';
 
   const myVote = perf && lobby.votes.find((v) => v.performanceId === perf.id && v.userId === user?.id);
+  const confirmed = document.getElementById('vote-confirmed');
+  const hasVote = !!myVote;
+  if (confirmed) {
+    const showConfirmed = confirmed.classList.contains('show');
+    if (showConfirmed !== hasVote) confirmed.classList.toggle('show', hasVote);
+  }
   document.querySelectorAll('.vote-btn').forEach((btn) => {
     const val = Number(btn.dataset.score);
-    btn.classList.toggle('selected', myVote && myVote.score === val);
+    const shouldSelect = !!(myVote && myVote.score === val);
+    const isSelected = btn.classList.contains('selected');
+    if (isSelected !== shouldSelect) btn.classList.toggle('selected', shouldSelect);
   });
-  document.getElementById('vote-confirmed')?.classList.toggle('show', !!myVote);
 }
 
 function setText(id, text) {

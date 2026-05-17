@@ -1,4 +1,4 @@
-import { uid, generateLobbyCode, VOTE_DURATION, loadCountries } from './utils.js';
+import { uid, generateLobbyCode, VOTE_DURATION, REVEAL_THRESHOLD, loadCountries } from './utils.js';
 import {
   loadDb,
   saveDb,
@@ -12,6 +12,7 @@ import {
   removeLobbyFromCaches,
   refreshUserLobbies,
   applyLobbyNormalization,
+  ensureLobbyCache,
 } from './store.js';
 import {
   isRemoteMode,
@@ -166,18 +167,20 @@ export async function joinLobby(code) {
 }
 
 export function setReady(isReady) {
+  const user = getCurrentUser();
   const session = getSession();
-  const lobby = updateLobby(session.lobbyId, (l) => {
+  if (!user || !session?.lobbyId) return null;
+  return updateLobby(session.lobbyId, (l) => {
     if (!l) return l;
-    return { ...l, ready: { ...l.ready, [session.userId]: isReady } };
+    return { ...l, ready: { ...l.ready, [user.id]: isReady } };
   });
-  return lobby;
 }
 
 export function startPerformance() {
+  const user = getCurrentUser();
   const session = getSession();
   return updateLobby(session.lobbyId, (l) => {
-    if (!l || l.adminId !== session.userId) return l;
+    if (!l || l.adminId !== user?.id) return l;
     return {
       ...l,
       status: 'live',
@@ -193,9 +196,10 @@ export function stopTimer() {
 }
 
 export function nextPerformance() {
+  const user = getCurrentUser();
   const session = getSession();
   return updateLobby(session.lobbyId, (l) => {
-    if (!l || l.adminId !== session.userId) return l;
+    if (!l || l.adminId !== user?.id) return l;
     const next = l.currentPerformanceIndex + 1;
     if (next >= l.performances.length) {
       return { ...l, status: 'finished', timerEndsAt: null, finishedAt: Date.now() };
@@ -211,9 +215,10 @@ export function nextPerformance() {
 }
 
 export function resetLobby() {
+  const user = getCurrentUser();
   const session = getSession();
   return updateLobby(session.lobbyId, (l) => {
-    if (!l || l.adminId !== session.userId) return l;
+    if (!l || l.adminId !== user?.id) return l;
     return {
       ...l,
       currentPerformanceIndex: 0,
@@ -228,13 +233,18 @@ export function resetLobby() {
   });
 }
 
-export function submitVote(score) {
+export async function submitVote(score) {
   const session = getSession();
   const user = getCurrentUser();
   if (!session?.lobbyId || !user) return { ok: false, error: 'Non connecté.' };
 
+  if (isRemoteMode()) {
+    const hydrated = await ensureLobbyCache(session.lobbyId);
+    if (!hydrated) return { ok: false, error: 'Lobby introuvable. Rejoins la partie.' };
+  }
+
   const lobby = getCurrentLobby();
-  if (!lobby?.timerEndsAt || Date.now() > lobby.timerEndsAt) {
+  if (!isVoteOpen(lobby)) {
     return { ok: false, error: 'Le vote est fermé.' };
   }
 
@@ -280,7 +290,15 @@ export function getRemainingSeconds(lobby) {
 }
 
 export function isVoteOpen(lobby) {
-  return lobby?.timerEndsAt && Date.now() < lobby.timerEndsAt;
+  if (!lobby?.timerEndsAt || Date.now() >= lobby.timerEndsAt) return false;
+  if (
+    lobby.dramaticReveal &&
+    !lobby.revealed &&
+    getRemainingSeconds(lobby) <= REVEAL_THRESHOLD
+  ) {
+    return false;
+  }
+  return true;
 }
 
 export function isAdmin(lobby, userId) {
