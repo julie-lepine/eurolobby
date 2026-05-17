@@ -44,12 +44,22 @@ data/
   countries-2025.json
 ```
 
+## Supabase (multijoueur en ligne)
+
+1. Copier `.env.example` → `.env.local` et remplir `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`
+2. Dans le [dashboard Supabase](https://supabase.com/dashboard) → **SQL Editor**, exécuter le fichier `supabase/schema.sql`
+3. **Authentication** → désactiver « Confirm email » pour les tests rapides (ou confirmer les emails à l’inscription)
+4. `npm run dev` — si les variables sont définies, l’app passe en **mode en ligne** (lobbys partagés + Realtime)
+
+Sans `.env.local`, l’app reste en mode **localStorage** (un navigateur = une base).
+
 ## Roadmap
 
-1. **Phase 3** — Supabase Auth + Realtime (votes, timer maître, chat)
-2. **Phase 4** — Import CSV ordre des prestations
+1. ~~**Phase 3** — Supabase Auth + Realtime~~ ✅ (base)
+2. **Phase 4** — Import CSV ordre des prestations, RLS renforcé
 3. **Phase 5** — Export PDF (jsPDF), PWA, déploiement
 
 ## Données
 
-Les mots de passe sont hashés en base64 pour la démo locale uniquement — **ne pas utiliser en production**.
+- **Local** : mots de passe en base64 (démo uniquement).
+- **Supabase** : Auth Supabase + profils / lobbys en base.

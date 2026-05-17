@@ -1,5 +1,23 @@
 import { uid, generateLobbyCode, VOTE_DURATION, loadCountries } from './utils.js';
-import { loadDb, saveDb, setSession, getSession, updateLobby, getCurrentUser, getCurrentLobby } from './store.js';
+import {
+  loadDb,
+  saveDb,
+  setSession,
+  getSession,
+  updateLobby,
+  getCurrentUser,
+  getCurrentLobby,
+  isUsingRemote,
+  setLobbyCache,
+  setUserLobbiesCache,
+} from './store.js';
+import {
+  isRemoteMode,
+  insertLobby,
+  saveLobby,
+  fetchLobbyByCode,
+  isCodeTaken,
+} from './remote.js';
 
 let countriesCache = null;
 
@@ -9,6 +27,11 @@ export async function getCountries() {
 }
 
 export function getLobbyMembers(lobby) {
+  if (isRemoteMode()) {
+    const members = lobby.members || [];
+    if (members.length) return members;
+    return lobby.memberIds.map((id) => ({ id, pseudo: 'Joueur', avatar: '🎤' }));
+  }
   const db = loadDb();
   return lobby.memberIds.map((id) => db.users.find((u) => u.id === id)).filter(Boolean);
 }
@@ -17,59 +40,111 @@ export function getCurrentPerformance(lobby) {
   return lobby.performances[lobby.currentPerformanceIndex] || null;
 }
 
-export function createLobby({ name, maxPlayers, isPrivate, dramaticReveal }) {
+async function generateUniqueCode() {
+  let code = generateLobbyCode();
+  if (isRemoteMode()) {
+    while (await isCodeTaken(code)) code = generateLobbyCode();
+    return code;
+  }
+  const db = loadDb();
+  while (db.lobbies.some((l) => l.code === code)) code = generateLobbyCode();
+  return code;
+}
+
+export async function createLobby({ name, maxPlayers, isPrivate, dramaticReveal }) {
   const user = getCurrentUser();
   if (!user) return { ok: false, error: 'Connecte-toi pour créer un lobby.' };
 
-  return getCountries().then((countries) => {
-    const db = loadDb();
-    let code = generateLobbyCode();
-    while (db.lobbies.some((l) => l.code === code)) code = generateLobbyCode();
+  const countries = await getCountries();
+  const code = await generateUniqueCode();
 
-    const performances = countries.map((c, i) => ({
-      id: uid(),
-      order: i + 1,
-      code: c.code,
-      flag: c.flag,
-      country: c.country,
-      artist: c.artist,
-      song: c.song,
-    }));
+  const performances = countries.map((c, i) => ({
+    id: uid(),
+    order: i + 1,
+    code: c.code,
+    flag: c.flag,
+    country: c.country,
+    artist: c.artist,
+    song: c.song,
+  }));
 
-    const lobby = {
-      id: uid(),
-      code,
-      name: name?.trim() || 'Soirée Eurovision 2025 🎤',
-      maxPlayers: Math.min(50, Math.max(2, Number(maxPlayers) || 10)),
-      isPrivate: !!isPrivate,
-      dramaticReveal: dramaticReveal !== false,
-      adminId: user.id,
-      memberIds: [user.id],
-      performances,
-      currentPerformanceIndex: 0,
-      status: 'waiting',
-      timerEndsAt: null,
-      votes: [],
-      chat: [],
-      ready: { [user.id]: false },
-      createdAt: Date.now(),
-      finishedAt: null,
-    };
+  const lobby = {
+    id: uid(),
+    code,
+    name: name?.trim() || 'Soirée Eurovision 2025 🎤',
+    maxPlayers: Math.min(50, Math.max(2, Number(maxPlayers) || 10)),
+    isPrivate: !!isPrivate,
+    dramaticReveal: dramaticReveal !== false,
+    adminId: user.id,
+    memberIds: [user.id],
+    members: [{ id: user.id, pseudo: user.pseudo, avatar: user.avatar }],
+    performances,
+    currentPerformanceIndex: 0,
+    status: 'waiting',
+    timerEndsAt: null,
+    votes: [],
+    chat: [],
+    ready: { [user.id]: false },
+    createdAt: Date.now(),
+    finishedAt: null,
+  };
 
-    db.lobbies.push(lobby);
-    saveDb(db);
-    const session = getSession() || {};
-    setSession({ ...session, userId: user.id, lobbyId: lobby.id });
-    return { ok: true, lobby };
-  });
+  if (isRemoteMode()) {
+    try {
+      await insertLobby(lobby);
+      setLobbyCache(lobby);
+      const session = getSession() || {};
+      setSession({ ...session, userId: user.id, lobbyId: lobby.id });
+      return { ok: true, lobby };
+    } catch (err) {
+      console.error(err);
+      return { ok: false, error: 'Impossible de créer le lobby. Vérifie Supabase (schéma SQL).' };
+    }
+  }
+
+  const db = loadDb();
+  db.lobbies.push(lobby);
+  saveDb(db);
+  const session = getSession() || {};
+  setSession({ ...session, userId: user.id, lobbyId: lobby.id });
+  return { ok: true, lobby };
 }
 
-export function joinLobby(code) {
+export async function joinLobby(code) {
   const user = getCurrentUser();
   if (!user) return { ok: false, error: 'Connecte-toi ou rejoins en invité.' };
 
+  const normalized = code.toUpperCase().trim();
+  let lobby;
+
+  if (isRemoteMode()) {
+    lobby = await fetchLobbyByCode(normalized);
+    if (!lobby) return { ok: false, error: 'Code invalide. Vérifie avec ton ami.' };
+
+    if (lobby.memberIds.length >= lobby.maxPlayers) return { ok: false, error: 'Lobby complet.' };
+
+    if (!lobby.memberIds.includes(user.id)) {
+      lobby.memberIds.push(user.id);
+      lobby.ready = { ...lobby.ready, [user.id]: false };
+      lobby.members = [
+        ...(lobby.members || []),
+        { id: user.id, pseudo: user.pseudo, avatar: user.avatar },
+      ];
+      try {
+        await saveLobby(lobby);
+      } catch (err) {
+        console.error(err);
+        return { ok: false, error: 'Erreur lors de la connexion au lobby.' };
+      }
+    }
+
+    setLobbyCache(lobby);
+    setSession({ ...getSession(), lobbyId: lobby.id });
+    return { ok: true, lobby };
+  }
+
   const db = loadDb();
-  const lobby = db.lobbies.find((l) => l.code === code.toUpperCase().trim());
+  lobby = db.lobbies.find((l) => l.code === normalized);
   if (!lobby) return { ok: false, error: 'Code invalide. Vérifie avec ton ami.' };
   if (lobby.memberIds.length >= lobby.maxPlayers) return { ok: false, error: 'Lobby complet.' };
   if (lobby.memberIds.includes(user.id)) {

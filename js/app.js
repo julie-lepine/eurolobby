@@ -1,6 +1,18 @@
 import { VOTE_DURATION, REVEAL_THRESHOLD } from './utils.js';
-import { getSession, setSession, getCurrentUser, getCurrentLobby, getUserLobbies } from './store.js';
-import { signup, login, loginAsGuest, requireAuth } from './auth.js';
+import {
+  getSession,
+  setSession,
+  getCurrentUser,
+  getCurrentLobby,
+  getUserLobbies,
+  isUsingRemote,
+  hydrateLobby,
+  refreshUserLobbies,
+  setLobbyCache,
+} from './store.js';
+import { signup, login, loginAsGuest, requireAuth, initRemoteAuth, logout } from './auth.js';
+import { subscribeToLobby, isRemoteMode } from './remote.js';
+import { isSupabaseConfigured } from './supabase.js';
 import {
   createLobby,
   joinLobby,
@@ -31,16 +43,34 @@ const BOTTOM_NAV_SCREENS = [
 let timerInterval = null;
 let revealTriggered = false;
 let selectedVote = null;
+let unsubscribeLobby = null;
 
 function getLobby() {
   return getCurrentLobby();
 }
 
-function refresh() {
-  const lobby = getLobby();
+async function refresh() {
   const user = getCurrentUser();
+  if (isUsingRemote() && user?.id) {
+    await refreshUserLobbies(user.id);
+  }
+  const lobby = getLobby();
   renderAll(lobby, user);
   syncTimerFromLobby(lobby);
+}
+
+function setupLobbyRealtime(lobbyId) {
+  if (unsubscribeLobby) {
+    unsubscribeLobby();
+    unsubscribeLobby = null;
+  }
+  if (!isRemoteMode() || !lobbyId) return;
+  unsubscribeLobby = subscribeToLobby(lobbyId, (lobby) => {
+    setLobbyCache(lobby);
+    const user = getCurrentUser();
+    renderAll(lobby, user);
+    syncTimerFromLobby(lobby);
+  });
 }
 
 function showToast(msg) {
@@ -104,49 +134,55 @@ export function selectAvatar(el) {
   el.classList.add('selected');
 }
 
-export function signupAndGo() {
+export async function signupAndGo() {
   const pseudo = document.getElementById('pseudo-input')?.value;
   const email = document.getElementById('signup-email')?.value;
   const password = document.getElementById('signup-password')?.value;
   const avatar = document.querySelector('#screen-signup .avatar-opt.selected')?.textContent;
-  const result = signup({ pseudo, email, password, avatar });
+  const result = await signup({ pseudo, email, password, avatar });
   if (!result.ok) {
     showAuthError('signup-error', result.error);
     return;
   }
   showAuthError('signup-error', '');
   showToast(`Bienvenue ${result.user.pseudo} !`);
+  if (isUsingRemote()) await refreshUserLobbies(result.user.id);
   goTo('screen-dashboard');
 }
 
-export function loginAndGo() {
+export async function loginAndGo() {
   const email = document.getElementById('login-email')?.value;
   const password = document.getElementById('login-password')?.value;
-  const result = login({ email, password });
+  const result = await login({ email, password });
   if (!result.ok) {
     showAuthError('login-error', result.error);
     return;
   }
   showAuthError('login-error', '');
   const session = getSession();
+  if (isUsingRemote()) await refreshUserLobbies(result.user.id);
   const lobbies = getUserLobbies(result.user.id);
   if (session?.lobbyId || lobbies.length) {
     const lobby = lobbies.find((l) => l.id === session?.lobbyId) || lobbies[lobbies.length - 1];
-    if (lobby) setSession({ ...getSession(), lobbyId: lobby.id });
+    if (lobby) {
+      setSession({ ...getSession(), lobbyId: lobby.id });
+      await hydrateLobby(lobby.id);
+      setupLobbyRealtime(lobby.id);
+    }
   }
   showToast(`Content de te revoir, ${result.user.pseudo} !`);
   goTo('screen-dashboard');
 }
 
-export function joinAsGuest() {
+export async function joinAsGuest() {
   const pseudo = document.getElementById('guest-pseudo')?.value;
   const avatar = document.querySelector('#screen-join .avatar-opt.selected')?.textContent || '🎤';
-  const result = loginAsGuest({ pseudo, avatar });
+  const result = await loginAsGuest({ pseudo, avatar });
   if (!result.ok) {
     showAuthError('join-error', result.error);
     return;
   }
-  joinLobbyAndGo();
+  await joinLobbyAndGo();
 }
 
 export function createLobbyAndGo() {
@@ -161,18 +197,20 @@ export function createLobbyAndGo() {
   const isPrivate = document.getElementById('toggle-private')?.classList.contains('on');
   const dramaticReveal = document.getElementById('toggle-dramatic')?.classList.contains('on');
 
-  createLobby({ name, maxPlayers, isPrivate, dramaticReveal }).then((result) => {
+  createLobby({ name, maxPlayers, isPrivate, dramaticReveal }).then(async (result) => {
     if (!result.ok) {
       showToast(result.error);
       return;
     }
+    setupLobbyRealtime(result.lobby.id);
+    if (isUsingRemote()) await refreshUserLobbies(getCurrentUser()?.id);
     renderCreatePreview(result.lobby.code);
     showToast(`Lobby créé ! Code : ${result.lobby.code}`);
     goTo('screen-waiting');
   });
 }
 
-export function joinLobbyAndGo() {
+export async function joinLobbyAndGo() {
   const code = document.getElementById('join-code-input')?.value;
   let user = requireAuth();
   if (!user) {
@@ -181,30 +219,36 @@ export function joinLobbyAndGo() {
       showAuthError('join-error', 'Pseudo requis pour rejoindre.');
       return;
     }
-    const g = loginAsGuest({ pseudo, avatar: '🎤' });
+    const g = await loginAsGuest({ pseudo, avatar: '🎤' });
     if (!g.ok) {
       showAuthError('join-error', g.error);
       return;
     }
     user = g.user;
   }
-  const result = joinLobby(code);
+  const result = await joinLobby(code);
   if (!result.ok) {
     showAuthError('join-error', result.error);
     return;
   }
+  setupLobbyRealtime(result.lobby.id);
+  if (isUsingRemote()) await refreshUserLobbies(user.id);
   showAuthError('join-error', '');
   showToast(`Bienvenue dans ${result.lobby.name} !`);
   goTo(result.lobby.status === 'live' ? 'screen-vote' : 'screen-waiting');
 }
 
-export function enterLobbyWaiting(lobbyId) {
+export async function enterLobbyWaiting(lobbyId) {
   setSession({ ...getSession(), lobbyId });
+  await hydrateLobby(lobbyId);
+  setupLobbyRealtime(lobbyId);
   goTo('screen-waiting');
 }
 
-export function enterLobbyVote(lobbyId) {
+export async function enterLobbyVote(lobbyId) {
   setSession({ ...getSession(), lobbyId });
+  await hydrateLobby(lobbyId);
+  setupLobbyRealtime(lobbyId);
   goTo('screen-vote');
 }
 
@@ -397,8 +441,12 @@ export function shareResults() {
   );
 }
 
-export function logout() {
-  setSession(null);
+export async function logoutUser() {
+  if (unsubscribeLobby) {
+    unsubscribeLobby();
+    unsubscribeLobby = null;
+  }
+  await logout();
   goTo('screen-home');
 }
 
@@ -460,21 +508,39 @@ function exposeGlobals() {
     createLobbyAndGo, joinLobbyAndGo, enterLobbyWaiting, enterLobbyVote,
     toggleReady, adminStart, adminStop, adminNext, adminReset, resultsNext,
     castVote, showReveal, hideReveal, copyInviteCode, sendChat, exportPdf,
-    shareResults, logout, previewCreateCode,
+    shareResults, logout: logoutUser, previewCreateCode,
   };
   Object.assign(window, fns);
 }
 
-function init() {
+async function initRemote() {
+  if (!isSupabaseConfigured) return;
+  await initRemoteAuth();
+  const session = getSession();
+  const user = getCurrentUser();
+  if (user?.id) {
+    await refreshUserLobbies(user.id);
+    if (session?.lobbyId) {
+      await hydrateLobby(session.lobbyId);
+      setupLobbyRealtime(session.lobbyId);
+    }
+  }
+  if (isRemoteMode()) {
+    showToast('Mode en ligne — lobbys partagés');
+  }
+}
+
+async function init() {
   initStars();
   bindEvents();
   exposeGlobals();
   previewCreateCode();
+  await initRemote();
 
   const user = getCurrentUser();
   if (user) {
     const session = getSession();
-    if (session?.lobbyId) refresh();
+    if (session?.lobbyId) await refresh();
   }
 }
 
