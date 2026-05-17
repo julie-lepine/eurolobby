@@ -837,11 +837,21 @@ async function init() {
   exposeGlobals();
   previewCreateCode();
 
-  const { user, lobby } = (await initRemote()) || { user: null, lobby: null };
+  try {
+    const { user, lobby } = (await initRemote()) || { user: null, lobby: null };
 
-  if (user) {
-    await refresh();
-    navigateAfterRestore(lobby || getLobby());
+    if (user) {
+      try {
+        await refresh();
+      } catch (err) {
+        console.error('refresh', err);
+        showToast('Erreur de chargement — réessaie de te connecter.');
+      }
+      navigateAfterRestore(lobby || getLobby());
+    }
+  } catch (err) {
+    console.error('init', err);
+    showToast('Erreur au démarrage. Recharge la page.');
   }
 }
 

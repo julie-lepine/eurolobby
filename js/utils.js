@@ -1,3 +1,5 @@
+import countriesCatalog from '../data/countries-2027.json';
+
 export const VOTE_DURATION = 180;
 export const REVEAL_THRESHOLD = 15;
 export const PERFORMANCE_COUNT = 25;
@@ -35,11 +37,26 @@ export function scoreClass(n) {
 }
 
 export async function loadCountries() {
-  const url = `${import.meta.env.BASE_URL}data/countries-2027.json`;
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Impossible de charger le catalogue pays');
-  const data = await res.json();
-  return data.slice(0, PERFORMANCE_COUNT);
+  if (countriesCatalog?.length) {
+    return countriesCatalog.slice(0, PERFORMANCE_COUNT);
+  }
+  const base = import.meta.env.BASE_URL || '/';
+  const urls = [
+    `${base}data/countries-2027.json`,
+    `${base}data/countries-2025.json`,
+    '/data/countries-2027.json',
+  ];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (Array.isArray(data) && data.length) return data.slice(0, PERFORMANCE_COUNT);
+    } catch {
+      /* essai URL suivante */
+    }
+  }
+  throw new Error('Impossible de charger le catalogue pays');
 }
 
 /** URL image drapeau (PNG) à partir du code ISO (FR, GB…). */
