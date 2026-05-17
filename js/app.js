@@ -47,6 +47,10 @@ const BOTTOM_NAV_SCREENS = [
   'screen-waiting',
 ];
 
+const SESSION_FINISHED_CLOSED = ['screen-vote', 'screen-results'];
+const SESSION_FINISHED_MSG =
+  'Session terminée — consultez le classement final.';
+
 let timerInterval = null;
 let revealTriggered = false;
 let lastVotePerfId = null;
@@ -64,8 +68,11 @@ function syncScreenFromLobby(lobby) {
   if (lobby.status === 'live' && active.id === 'screen-waiting') {
     goTo('screen-vote');
   }
-  if (lobby.status === 'finished' && (active.id === 'screen-vote' || active.id === 'screen-waiting')) {
-    goTo('screen-final');
+  if (
+    lobby.status === 'finished' &&
+    (SESSION_FINISHED_CLOSED.includes(active.id) || active.id === 'screen-waiting')
+  ) {
+    goTo('screen-final', { silent: true });
   }
 }
 
@@ -85,6 +92,11 @@ async function refresh() {
   renderAll(lobby);
   syncTimerFromLobby(lobby);
   syncScreenFromLobby(lobby);
+  const nav = document.getElementById('bottom-nav');
+  const active = document.querySelector('.screen.active');
+  if (nav?.style.display === 'flex' && active) {
+    syncBottomNav(active.id);
+  }
 }
 
 function setupLobbyRealtime(lobbyId) {
@@ -246,9 +258,16 @@ function bindDashboardActions() {
   });
 }
 
-export function goTo(id) {
+export function goTo(id, options = {}) {
+  const { silent = false } = options;
   const lobby = getLobby();
   const user = getCurrentUser();
+
+  if (lobby?.status === 'finished' && SESSION_FINISHED_CLOSED.includes(id)) {
+    if (!silent) showToast(SESSION_FINISHED_MSG);
+    id = 'screen-final';
+  }
+
   if (
     id === 'screen-final' &&
     lobby &&
@@ -259,18 +278,14 @@ export function goTo(id) {
     return;
   }
 
-  document.querySelectorAll('.screen').forEach((s) => {
-    s.classList.remove('active', 'with-bottom-nav');
-  });
+  document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
   const target = document.getElementById(id);
   if (!target) return;
 
   target.classList.add('active');
-  if (BOTTOM_NAV_SCREENS.includes(id)) {
-    target.classList.add('with-bottom-nav');
-  }
   target.scrollTop = 0;
   target.querySelector('.results-body')?.scrollTo(0, 0);
+  target.querySelector('.final-content')?.scrollTo(0, 0);
 
   const nav = document.getElementById('bottom-nav');
   if (nav) nav.style.display = BOTTOM_NAV_SCREENS.includes(id) ? 'flex' : 'none';
@@ -280,12 +295,6 @@ export function goTo(id) {
 
   if (id === 'screen-final') {
     initConfetti();
-    requestAnimationFrame(() => {
-      const content = target.querySelector('.final-content');
-      if (!content) return;
-      const anchor = content.querySelector('.final-ranking-header');
-      content.scrollTop = anchor ? Math.max(0, anchor.offsetTop - 8) : 0;
-    });
   }
   if (id === 'screen-vote') {
     resetVoteUIIfNeeded(getLobby());
@@ -309,16 +318,28 @@ export function goTo(id) {
 }
 
 function syncBottomNav(screenId) {
-  const navMap = { 'screen-dashboard': 0, 'screen-vote': 1, 'screen-results': 2, 'screen-final': 3 };
-  const index = navMap[screenId];
+  const lobby = getLobby();
+  const finished = lobby?.status === 'finished';
+  const navMap = {
+    'screen-dashboard': 0,
+    'screen-vote': 1,
+    'screen-results': 2,
+    'screen-final': 3,
+  };
+  let effectiveId = screenId;
+  if (finished && SESSION_FINISHED_CLOSED.includes(screenId)) {
+    effectiveId = 'screen-final';
+  }
+  const index = navMap[effectiveId];
   document.querySelectorAll('.nav-item').forEach((item, i) => {
+    const disabled = finished && (i === 1 || i === 2);
     item.classList.toggle('active', index !== undefined && i === index);
+    item.classList.toggle('nav-item--disabled', disabled);
+    item.setAttribute('aria-disabled', disabled ? 'true' : 'false');
   });
 }
 
-export function navTo(screenId, el) {
-  document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('active'));
-  el.classList.add('active');
+export function navTo(screenId) {
   goTo(screenId);
 }
 
@@ -803,7 +824,7 @@ export async function exportPdf() {
   }
   try {
     showToast('Génération du PDF…');
-    exportLobbyPdf(lobby, user, readExportOptions());
+    await exportLobbyPdf(lobby, user, readExportOptions());
     showToast('PDF téléchargé !');
   } catch (err) {
     console.error('exportPdf', err);

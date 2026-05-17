@@ -9,6 +9,7 @@
 </head>
 <body>
 <div id="app">
+<div class="app-stage">
 
 <!-- SCREEN: HOME -->
 <div class="screen active" id="screen-home">
@@ -539,6 +540,7 @@
     <button class="btn btn-primary" type="button" onclick="goTo('screen-export')">📄 Exporter en PDF</button>
     <button class="btn btn-secondary" type="button" onclick="goTo('screen-dashboard')">← Retour au dashboard</button>
   </div>
+  <div class="final-scroll-end" aria-hidden="true"></div>
   </div>
 </div>
 
@@ -658,21 +660,23 @@
   <div class="spacer"></div>
 </div>
 
+</div>
+
 <!-- BOTTOM NAV (shown on some screens) -->
 <div class="bottom-nav" id="bottom-nav" style="display:none">
-  <div class="nav-item active" onclick="navTo('screen-dashboard',this)">
+  <div class="nav-item active" onclick="navTo('screen-dashboard')">
     <div class="nav-icon">🏠</div>
     <div>Accueil</div>
   </div>
-  <div class="nav-item" onclick="navTo('screen-vote',this)">
+  <div class="nav-item" data-nav="vote" onclick="navTo('screen-vote')">
     <div class="nav-icon">🗳️</div>
     <div>Voter</div>
   </div>
-  <div class="nav-item" onclick="navTo('screen-results',this)">
+  <div class="nav-item" data-nav="results" onclick="navTo('screen-results')">
     <div class="nav-icon">📊</div>
     <div>Résultats</div>
   </div>
-  <div class="nav-item" onclick="navTo('screen-final',this)">
+  <div class="nav-item" data-nav="final" onclick="navTo('screen-final')">
     <div class="nav-icon">🏆</div>
     <div>Final</div>
   </div>
