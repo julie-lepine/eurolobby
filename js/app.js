@@ -529,6 +529,7 @@ export async function logoutUser() {
     unsubscribeLobby = null;
   }
   await logout();
+  showToast('Déconnecté');
   goTo('screen-home');
 }
 
