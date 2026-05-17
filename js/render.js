@@ -583,7 +583,7 @@ export function renderFinal(lobby, user) {
       podium.innerHTML = top3
         .map(
           (r, i) => `<div class="podium-item">
-          <div class="podium-flag" style="--delay:${delays[i]}">${flagImgHtml(r.perf, { width: 96, className: 'flag-icon flag-icon--podium' })}</div>
+          <div class="podium-flag">${flagImgHtml(r.perf, { width: 52, className: 'flag-icon flag-icon--podium' })}</div>
           <div class="podium-country">${escapeHtml(r.perf.country)}</div>
           <div class="podium-score">${formatAvg(r.avg)}</div>
           <div class="podium-block ${blocks[i]}">${places[i]}</div>

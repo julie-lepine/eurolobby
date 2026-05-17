@@ -1579,19 +1579,13 @@ button.quick-btn {
   flex: 1;
   min-height: 0;
   width: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   overscroll-behavior: contain;
+  padding-bottom: var(--bottom-nav-safe);
   scroll-padding-bottom: var(--bottom-nav-safe);
   box-sizing: border-box;
-}
-.final-bottom-spacer {
-  flex-shrink: 0;
-  height: var(--bottom-nav-safe);
-  width: 100%;
-  pointer-events: none;
 }
 
 /* ===== SCREEN: EXPORT ===== */
@@ -1686,11 +1680,11 @@ button.quick-btn {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 16px 20px 8px;
-  margin-top: 0;
+  padding: 20px 20px 8px;
+  margin-top: 8px;
 }
 .final-ranking-header {
-  padding-top: 12px;
+  padding-top: 56px;
 }
 .final-ranking-compact {
   padding-bottom: 16px;
@@ -1863,10 +1857,9 @@ button.quick-btn {
 .podium-area {
   position: relative;
   z-index: 2;
-  padding: 20px 16px 24px;
-  margin: 0 0 12px;
+  padding: 8px 12px 16px;
+  margin: 0;
   text-align: center;
-  overflow: visible;
   max-width: 100%;
   box-sizing: border-box;
 }
@@ -1884,45 +1877,28 @@ button.quick-btn {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 6px;
-  margin: 12px 0 0;
-  padding-bottom: 4px;
+  gap: clamp(4px, 2vw, 10px);
+  margin: 8px 0 0;
+  padding: 0;
   max-width: 100%;
   box-sizing: border-box;
-  overflow: visible;
 }
 .podium-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  overflow: visible;
-  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 120px;
 }
 .podium-flag {
-  font-size: 40px;
-  animation: podiumBounce 1s ease-out var(--delay, 0s) both;
-  transform-origin: center bottom;
+  flex-shrink: 0;
 }
 .final-content .flag-icon--podium {
-  width: clamp(40px, 12vw, 56px);
-  height: clamp(30px, 9vw, 42px);
-}
-@keyframes podiumBounce {
-  0% {
-    opacity: 0;
-    transform: translateY(-30px) scale(0.5);
-  }
-  60% {
-    transform: translateY(4px) scale(1.05);
-  }
-  80% {
-    transform: translateY(-5px) scale(0.97);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  width: clamp(36px, 11vw, 52px);
+  height: clamp(27px, 8vw, 39px);
 }
 .podium-country {
   font-family: var(--font-display);
@@ -1934,32 +1910,31 @@ button.quick-btn {
   font-size: 12px;
 }
 .podium-block {
-  border-radius: 12px 12px 0 0;
-  width: 88px;
+  border-radius: 10px 10px 0 0;
+  width: 100%;
+  max-width: 88px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: clamp(18px, 5vw, 24px);
   font-weight: 900;
+  flex-shrink: 0;
 }
 .podium-1 {
   background: linear-gradient(180deg, #ffd740, #ff9800);
-  height: clamp(72px, 20vw, 100px);
+  height: clamp(56px, 16vw, 88px);
   color: #fff;
-  flex-shrink: 0;
 }
 .podium-2 {
   background: linear-gradient(180deg, #b0bec5, #78909c);
-  height: clamp(56px, 16vw, 72px);
+  height: clamp(44px, 12vw, 64px);
   color: #fff;
-  flex-shrink: 0;
 }
 .podium-3 {
   background: linear-gradient(180deg, #a1887f, #795548);
-  height: clamp(44px, 12vw, 52px);
+  height: clamp(32px, 9vw, 48px);
   color: #fff;
-  flex-shrink: 0;
 }
 
 .final-content .stats-grid {

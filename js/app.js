@@ -276,7 +276,10 @@ export function goTo(id) {
   if (id === 'screen-final') {
     initConfetti();
     requestAnimationFrame(() => {
-      target.scrollTop = 0;
+      const content = target.querySelector('.final-content');
+      if (!content) return;
+      const anchor = content.querySelector('.final-ranking-header');
+      content.scrollTop = anchor ? Math.max(0, anchor.offsetTop - 8) : 0;
     });
   }
   if (id === 'screen-vote') {
