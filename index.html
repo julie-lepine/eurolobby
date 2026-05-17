@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EuroLobby — Eurovision Live Voting</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+<!-- SCREEN: HOME -->
+<div class="screen active" id="screen-home">
+  <div class="home-bg"></div>
+  <div class="stars" id="stars"></div>
+  <div class="home-content">
+    <div class="logo-area">
+      <div class="logo-icon">
+        <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22 4L26.5 14.5L38 15.5L29.5 23.5L32 35L22 29L12 35L14.5 23.5L6 15.5L17.5 14.5L22 4Z" fill="white" opacity="0.9"/>
+        </svg>
+      </div>
+      <div class="logo-text">EuroLobby</div>
+      <div class="logo-sub">Vote en direct avec tes amis 🎤</div>
+    </div>
+
+    <div>
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        EUROVISION 2025 · 37 PAYS
+      </div>
+      <div class="home-visual">
+        <div class="flag-bubble" style="--delay:0.1s">🇫🇷</div>
+        <div class="flag-bubble" style="--delay:0.2s">🇸🇪</div>
+        <div class="flag-bubble" style="--delay:0.3s">🇮🇹</div>
+        <div class="flag-bubble" style="--delay:0.4s">🇩🇪</div>
+        <div class="flag-bubble" style="--delay:0.5s">🇪🇸</div>
+        <div class="flag-bubble" style="--delay:0.6s">+</div>
+      </div>
+    </div>
+
+    <div class="home-buttons">
+      <button class="btn btn-primary" onclick="goTo('screen-login')">
+        <span>✦</span> Se connecter
+      </button>
+      <button class="btn btn-secondary" onclick="goTo('screen-signup')">
+        Créer un compte
+      </button>
+      <button class="btn btn-ghost" onclick="goTo('screen-join')">
+        Rejoindre un lobby
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: SIGNUP -->
+<div class="screen" id="screen-signup">
+  <div class="auth-screen">
+    <button class="back-btn" onclick="goTo('screen-home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Retour
+    </button>
+    <div class="auth-header mt-24">
+      <div class="auth-title">Crée ton compte 🎉</div>
+      <div class="auth-sub">Rejoins des milliers de fans qui votent en direct.</div>
+    </div>
+
+    <div class="field-group">
+      <div class="label">Pseudo</div>
+      <input class="input-field" type="text" placeholder="Eurovision_Fan_42" id="pseudo-input">
+    </div>
+    <div class="field-group">
+      <div class="label">Email</div>
+      <input class="input-field" type="email" placeholder="fan@eurovision.com" id="signup-email">
+    </div>
+    <div class="field-group">
+      <div class="label">Mot de passe</div>
+      <input class="input-field" type="password" placeholder="••••••••" id="signup-password">
+    </div>
+    <div class="field-group">
+      <div class="label">Avatar (optionnel)</div>
+      <div class="avatar-pick">
+        <div class="avatar-opt selected" onclick="selectAvatar(this)">🎤</div>
+        <div class="avatar-opt" onclick="selectAvatar(this)">⭐</div>
+        <div class="avatar-opt" onclick="selectAvatar(this)">🎵</div>
+        <div class="avatar-opt" onclick="selectAvatar(this)">🦋</div>
+        <div class="avatar-opt" onclick="selectAvatar(this)">🔥</div>
+      </div>
+    </div>
+
+    <p class="auth-error" id="signup-error"></p>
+    <div class="mt-24">
+      <button class="btn btn-primary" onclick="signupAndGo()">Créer mon compte ✨</button>
+    </div>
+    <div class="auth-switch">Déjà un compte ? <button type="button" class="auth-link" onclick="goTo('screen-login')">Se connecter</button></div>
+  </div>
+</div>
+
+<!-- SCREEN: LOGIN -->
+<div class="screen" id="screen-login">
+  <div class="auth-screen">
+    <button class="back-btn" onclick="goTo('screen-home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Retour
+    </button>
+    <div class="auth-header mt-24">
+      <div class="auth-title">Content de te revoir 👋</div>
+      <div class="auth-sub">Connecte-toi pour rejoindre ton lobby.</div>
+    </div>
+    <div class="field-group">
+      <div class="label">Email</div>
+      <input class="input-field" type="email" placeholder="fan@eurovision.com" id="login-email">
+    </div>
+    <div class="field-group">
+      <div class="label">Mot de passe</div>
+      <input class="input-field" type="password" placeholder="••••••••" id="login-password">
+    </div>
+    <p class="auth-error" id="login-error"></p>
+    <div class="mt-24">
+      <button class="btn btn-primary" onclick="loginAndGo()">Se connecter</button>
+    </div>
+    <div class="auth-switch">Pas encore de compte ? <button type="button" class="auth-link" onclick="goTo('screen-signup')">Créer un compte</button></div>
+  </div>
+</div>
+
+<!-- SCREEN: JOIN LOBBY -->
+<div class="screen" id="screen-join">
+  <div class="auth-screen">
+    <button class="back-btn" onclick="goTo('screen-home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Retour
+    </button>
+    <div class="auth-header mt-24">
+      <div class="auth-title">Rejoindre un lobby 🚀</div>
+      <div class="auth-sub">Saisis le code d'invitation de ton ami.</div>
+    </div>
+    <div class="field-group">
+      <div class="label">Code d'invitation</div>
+      <input class="input-field" id="join-code-input" type="text" placeholder="EX7K2P" style="font-family:var(--font-display);font-size:24px;font-weight:800;letter-spacing:6px;text-align:center;text-transform:uppercase">
+    </div>
+    <div class="field-group">
+      <div class="label">Pseudo (invité)</div>
+      <input class="input-field" type="text" id="guest-pseudo" placeholder="Ton pseudo">
+    </div>
+    <p class="auth-error" id="join-error"></p>
+    <div class="mt-16">
+      <button class="btn btn-primary" onclick="joinLobbyAndGo()">Rejoindre 🎯</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: DASHBOARD -->
+<div class="screen" id="screen-dashboard">
+  <div class="dash-header">
+    <div class="dash-greeting">Bonsoir,</div>
+    <div class="dash-name" id="dash-name">🎤 EuroFan42</div>
+  </div>
+
+  <div class="dash-live-banner" style="margin-bottom:20px">
+    <div>
+      <div class="dash-live-text">🔴 Eurovision EN DIRECT</div>
+      <div class="dash-live-sub" id="dash-live-sub">En attente</div>
+    </div>
+    <button class="btn btn-primary" style="width:auto;padding:10px 16px;font-size:13px" id="dash-vote-btn" onclick="goTo('screen-vote')">Voter →</button>
+  </div>
+
+  <div class="quick-actions">
+    <div class="quick-btn" onclick="goTo('screen-create')">
+      <div class="quick-btn-icon">➕</div>
+      <div class="quick-btn-label">Créer</div>
+    </div>
+    <div class="quick-btn" onclick="goTo('screen-join')">
+      <div class="quick-btn-icon">🔗</div>
+      <div class="quick-btn-label">Rejoindre</div>
+    </div>
+    <div class="quick-btn" onclick="goTo('screen-final')">
+      <div class="quick-btn-icon">🏆</div>
+      <div class="quick-btn-label">Résultats</div>
+    </div>
+    <div class="quick-btn" onclick="goTo('screen-admin')">
+      <div class="quick-btn-icon">⚙️</div>
+      <div class="quick-btn-label">Admin</div>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Mes lobbys</div>
+  </div>
+  <div id="lobby-list-active"></div>
+
+  <div class="section-header">
+    <div class="section-title">Historique</div>
+  </div>
+  <div id="lobby-list-history"></div>
+
+  <div class="spacer"></div>
+</div>
+
+<!-- SCREEN: CREATE LOBBY -->
+<div class="screen" id="screen-create">
+  <div class="create-screen">
+    <button class="back-btn" onclick="goTo('screen-dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Dashboard
+    </button>
+    <div class="auth-header mt-24">
+      <div class="auth-title">Nouveau lobby 🎪</div>
+      <div class="auth-sub">Configure ta soirée Eurovision.</div>
+    </div>
+
+    <div class="field-group">
+      <div class="label">Nom du lobby</div>
+      <input class="input-field" id="lobby-name-input" type="text" placeholder="Soirée Eurovision 2025 🎤" value="Soirée Eurovision 2025 🎤">
+    </div>
+    <div class="field-group">
+      <div class="label">Joueurs maximum</div>
+      <input class="input-field" id="lobby-max-input" type="number" value="10" min="2" max="50">
+    </div>
+    <div class="field-group">
+      <div class="label">Code d'invitation</div>
+      <div class="code-box">
+        <div class="invite-code" id="create-invite-code">······</div>
+        <div class="code-hint">Partagez ce code avec vos amis</div>
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-info">Lobby privé</div>
+          <div class="toggle-sub">Accès uniquement sur invitation</div>
+        </div>
+        <div class="toggle-switch on" id="toggle-private" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-info">Révélation dramatique</div>
+          <div class="toggle-sub">Votes cachés jusqu'aux 15 dernières secondes</div>
+        </div>
+        <div class="toggle-switch on" id="toggle-dramatic" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+
+    <div class="mt-24">
+      <button class="btn btn-primary" onclick="createLobbyAndGo()">Créer le lobby ✨</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: WAITING ROOM -->
+<div class="screen waiting-bg" id="screen-waiting">
+  <div class="waiting-header">
+    <button class="back-btn" onclick="goTo('screen-dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Dashboard
+    </button>
+    <div class="waiting-title mt-16">Soirée Eurovision 🎉</div>
+    <div id="waiting-count" style="color:var(--muted);font-size:14px">0 / 10 participants</div>
+  </div>
+
+  <div class="participants-grid" id="participants-grid"></div>
+
+  <div class="waiting-invite">
+    <div>
+      <div class="invite-label">Code d'invitation</div>
+      <div class="invite-code-sm">EX7K2P</div>
+    </div>
+    <div class="copy-btn" onclick="copyInviteCode()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+    </div>
+  </div>
+
+  <div class="mini-chat">
+    <div class="chat-msgs" id="chat-msgs"></div>
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" placeholder="Un message...">
+      <button type="button" class="chat-send" id="chat-send">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div style="padding:16px 20px;">
+    <button class="btn btn-primary" onclick="toggleReady()">✅ Je suis prêt !</button>
+    <div style="text-align:center;color:var(--muted);font-size:13px;margin-top:12px" id="ready-status">—</div>
+  </div>
+  <div class="spacer" style="height:40px"></div>
+</div>
+
+<!-- SCREEN: LIVE VOTE -->
+<div class="screen" id="screen-vote" style="position:relative">
+  <div class="reveal-overlay" id="reveal-overlay">
+    <div class="reveal-title">⚡ Révélation !</div>
+    <div class="reveal-sub">Les votes du lobby apparaissent...</div>
+    <div class="vote-reveal-list" id="vote-reveal-list"></div>
+    <div class="reveal-avg" style="margin-top:24px">
+      <div class="reveal-avg-label">Moyenne du lobby</div>
+      <div class="reveal-avg-val" id="avg-animated">+1.2</div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:24px;padding:0 20px;width:100%">
+      <button class="btn btn-secondary" style="flex:1" onclick="hideReveal()">← Retour</button>
+      <button class="btn btn-primary" style="flex:1" onclick="goTo('screen-results')">Résultats →</button>
+    </div>
+  </div>
+
+  <div class="vote-header">
+    <div>
+      <div class="performance-num" id="vote-performance-num">PRESTATION 12 / 25</div>
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-top:2px" id="vote-lobby-name">Lobby</div>
+    </div>
+    <div class="lobby-members" id="lobby-members"></div>
+
+  <div class="country-card">
+    <div class="country-flag-bg" id="country-flag-bg">🇮🇹</div>
+    <div class="country-inner">
+      <div class="country-flag" id="country-flag">🇮🇹</div>
+      <div class="country-info">
+        <div class="country-name" id="country-name">—</div>
+        <div class="artist-name" id="artist-name">—</div>
+        <div class="song-name" id="song-name">♪ —</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="timer-area">
+    <div class="timer-display">
+      <div class="timer-label">⏱ TEMPS RESTANT</div>
+      <div class="timer-value" id="timer-display">3:00</div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill" style="width:100%"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px">
+      <div style="font-size:11px;color:var(--muted2)">Vote ouvert</div>
+      <div style="font-size:11px;color:var(--muted2)">Révélation à 0:15</div>
+    </div>
+  </div>
+
+  <div id="vote-section">
+    <div style="padding:20px 20px 8px;font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--muted)">TON VOTE</div>
+    <div class="vote-buttons" id="vote-buttons">
+      <div class="vote-btn neg" onclick="castVote(this, -3)">-3</div>
+      <div class="vote-btn neg" onclick="castVote(this, -2)">-2</div>
+      <div class="vote-btn neg" onclick="castVote(this, -1)">-1</div>
+      <div class="vote-btn neutral" onclick="castVote(this, 0)">0</div>
+      <div class="vote-btn pos" onclick="castVote(this, 1)">+1</div>
+      <div class="vote-btn pos" onclick="castVote(this, 2)">+2</div>
+      <div class="vote-btn pos" onclick="castVote(this, 3)">+3</div>
+    </div>
+
+    <div class="vote-confirmed" id="vote-confirmed">
+      <div class="vote-confirmed-icon">✅</div>
+      <div class="vote-confirmed-text">Vote enregistré !</div>
+      <div class="vote-confirmed-sub">Révélation dans les 15 dernières secondes...</div>
+    </div>
+
+    <div style="padding:16px 20px;display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" id="reveal-demo-btn" onclick="showReveal()">⚡ Voir révélation</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="goTo('screen-results')">Résultats →</button>
+    </div>
+  </div>
+
+  <div class="spacer" style="height:20px"></div>
+</div>
+
+<!-- SCREEN: RESULTS -->
+<div class="screen" id="screen-results">
+  <div class="results-header">
+    <button class="back-btn" onclick="goTo('screen-vote')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Vote
+    </button>
+    <div class="results-title mt-16" id="results-title">🇮🇹 Italie</div>
+    <div style="color:var(--muted);font-size:14px">Résultats du lobby</div>
+  </div>
+
+  <div class="score-card">
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px">
+      <div class="score-flag" id="results-score-flag">🇮🇹</div>
+      <div>
+        <div class="score-label">Moyenne du lobby</div>
+        <div class="score-big" id="results-score-big">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-pad">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="background:rgba(105,240,174,0.08);border:1px solid rgba(105,240,174,0.2);border-radius:var(--r);padding:14px 16px">
+        <div style="font-size:11px;color:var(--green);letter-spacing:0.5px;margin-bottom:4px">MEILLEUR VOTE</div>
+        <div style="font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--green)" id="results-best-score">—</div>
+        <div style="font-size:12px;color:var(--muted)" id="results-best-name">—</div>
+      </div>
+      <div style="background:rgba(255,82,82,0.08);border:1px solid rgba(255,82,82,0.2);border-radius:var(--r);padding:14px 16px">
+        <div style="font-size:11px;color:var(--red);letter-spacing:0.5px;margin-bottom:4px">PIRE VOTE</div>
+        <div style="font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--red)" id="results-worst-score">—</div>
+        <div style="font-size:12px;color:var(--muted)" id="results-worst-name">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vote-dist page-pad" id="vote-dist-bars">
+    <div class="dist-title">DISTRIBUTION DES VOTES</div>
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Classement provisoire</div>
+    <div class="section-action" id="results-progress">0/0 prestations</div>
+  </div>
+
+  <div class="ranking-list" id="results-ranking">
+    <div class="ranking-item" style="display:none">
+      <div class="rank-num gold">1</div>
+      <div class="rank-flag">🇸🇪</div>
+      <div class="rank-country">Suède</div>
+      <div class="rank-score">+2.5</div>
+    </div>
+    <div class="ranking-item">
+      <div class="rank-num silver">2</div>
+      <div class="rank-flag">🇫🇷</div>
+      <div class="rank-country">France</div>
+      <div class="rank-score">+2.2</div>
+    </div>
+    <div class="ranking-item" style="border-color:var(--accent);background:rgba(224,64,251,0.06)">
+      <div class="rank-num bronze">3</div>
+      <div class="rank-flag">🇮🇹</div>
+      <div class="rank-country">Italie ← maintenant</div>
+      <div class="rank-score">+1.2</div>
+    </div>
+    <div class="ranking-item">
+      <div class="rank-num">4</div>
+      <div class="rank-flag">🇨🇭</div>
+      <div class="rank-country">Suisse</div>
+      <div class="rank-score">+0.8</div>
+    </div>
+    <div class="ranking-item">
+      <div class="rank-num">5</div>
+      <div class="rank-flag">🇬🇧</div>
+      <div class="rank-country">Royaume-Uni</div>
+      <div class="rank-score">-0.2</div>
+    </div>
+  </div>
+
+  <div style="padding:20px">
+    <button class="btn btn-primary" onclick="resultsNext()">→ Prestation suivante</button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- SCREEN: FINAL -->
+<div class="screen" id="screen-final" style="position:relative">
+  <div class="confetti-area" id="confetti"></div>
+
+  <div class="podium-area">
+    <div class="final-title">🏆 Classement final</div>
+    <div style="color:var(--muted);font-size:14px;margin-top:4px">25 prestations · Lobby de 6</div>
+
+    <div class="podium-row" id="podium-row"></div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-emoji">🎯</div>
+      <div class="stat-title">GOÛTS POPULAIRES</div>
+      <div class="stat-val" id="stat-popular">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-emoji">😤</div>
+      <div class="stat-title">LE PLUS SÉVÈRE</div>
+      <div class="stat-val" id="stat-severe">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-emoji">🤩</div>
+      <div class="stat-title">LE PLUS GÉNÉREUX</div>
+      <div class="stat-val" id="stat-generous">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-emoji">💫</div>
+      <div class="stat-title">MOYENNE GROUPE</div>
+      <div class="stat-val" id="stat-group-avg">—</div>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Classement complet</div>
+  </div>
+  <div class="ranking-list" id="final-ranking"></div>
+
+  <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
+    <button class="btn btn-primary" onclick="goTo('screen-export')">📄 Exporter en PDF</button>
+    <button class="btn btn-secondary" onclick="goTo('screen-dashboard')">← Retour au dashboard</button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- SCREEN: EXPORT -->
+<div class="screen" id="screen-export">
+  <div style="padding:56px 24px 40px">
+    <button class="back-btn" onclick="goTo('screen-final')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Résultats
+    </button>
+    <div class="auth-header mt-24">
+      <div class="auth-title">📄 Export PDF</div>
+      <div class="auth-sub">Génère un rapport stylé de ta soirée Eurovision.</div>
+    </div>
+
+    <div style="background:var(--card);border-radius:var(--r2);border:1px solid var(--border);overflow:hidden;margin-bottom:20px">
+      <div style="background:linear-gradient(135deg,rgba(224,64,251,0.2),rgba(124,77,255,0.2));padding:20px;border-bottom:1px solid var(--border)">
+        <div style="font-family:var(--font-display);font-size:11px;font-weight:700;letter-spacing:2px;color:var(--muted);margin-bottom:4px">APERÇU</div>
+        <div style="font-family:var(--font-display);font-size:20px;font-weight:800">Rapport Eurovision 2025</div>
+        <div style="color:var(--muted);font-size:13px;margin-top:2px">Lobby: Soirée Eurovision 2025 · 6 membres</div>
+      </div>
+      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;font-size:14px">
+          <span style="color:var(--muted)">🏆 Vainqueur</span>
+          <span style="font-weight:600">🇸🇪 Suède (+3.1)</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:14px">
+          <span style="color:var(--muted)">👥 Participants</span>
+          <span style="font-weight:600">6 votants</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:14px">
+          <span style="color:var(--muted)">🎤 Prestations</span>
+          <span style="font-weight:600">25 pays</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:14px">
+          <span style="color:var(--muted)">💫 Moyenne globale</span>
+          <span style="font-weight:600">+1.6 / 3</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="label">Inclure dans l'export</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="toggle-row">
+          <div class="toggle-info">Classement complet</div>
+          <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">Votes détaillés par utilisateur</div>
+          <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">Statistiques fun</div>
+          <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">Heatmap des votes</div>
+          <div class="toggle-switch" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-24">
+      <button class="btn btn-primary" onclick="exportPdf()">📥 Générer le PDF</button>
+    </div>
+    <div class="mt-16">
+      <button class="btn btn-secondary" onclick="shareResults()">🔗 Partager les résultats</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: ADMIN -->
+<div class="screen" id="screen-admin">
+  <div class="admin-header">
+    <div>
+      <div class="dash-greeting">Panneau</div>
+      <div class="dash-name" style="font-size:22px">Administration</div>
+    </div>
+    <div class="admin-badge">⚙️ ADMIN</div>
+  </div>
+
+  <div class="admin-perf-card">
+    <div class="admin-perf-top">
+      <div class="admin-perf-flag" id="admin-perf-flag">🇮🇹</div>
+      <div>
+        <div style="font-family:var(--font-display);font-size:18px;font-weight:800" id="admin-perf-name">—</div>
+        <div style="color:var(--muted);font-size:13px" id="admin-perf-sub">—</div>
+        <div style="color:var(--accent);font-size:13px;margin-top:2px">🔴 EN COURS</div>
+      </div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div class="timer-display">
+        <div class="timer-label">⏱ TIMER GLOBAL</div>
+        <div class="timer-value" id="admin-timer-display">3:00</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="admin-progress-fill" style="width:100%"></div></div>
+    </div>
+    <div class="admin-controls">
+      <button class="admin-btn admin-start" onclick="adminStart()">▶ Démarrer</button>
+      <button class="admin-btn admin-next" onclick="adminNext()">→ Suivant</button>
+      <button class="admin-btn admin-stop" onclick="adminStop()">⏸ Stop</button>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Ordre des prestations</div>
+    <div class="section-action" onclick="showToast('Import CSV disponible')">+ Importer</div>
+  </div>
+
+  <div class="admin-perf-list" id="admin-perf-list"></div>
+
+  <div style="padding:20px;margin-top:8px">
+    <button class="btn btn-danger" onclick="adminReset()">🔄 Réinitialiser la session</button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- BOTTOM NAV (shown on some screens) -->
+<div class="bottom-nav" id="bottom-nav" style="display:none">
+  <div class="nav-item active" onclick="navTo('screen-dashboard',this)">
+    <div class="nav-icon">🏠</div>
+    <div>Accueil</div>
+  </div>
+  <div class="nav-item" onclick="navTo('screen-vote',this)">
+    <div class="nav-icon">🗳️</div>
+    <div>Voter</div>
+  </div>
+  <div class="nav-item" onclick="navTo('screen-results',this)">
+    <div class="nav-icon">📊</div>
+    <div>Résultats</div>
+  </div>
+  <div class="nav-item" onclick="navTo('screen-final',this)">
+    <div class="nav-icon">🏆</div>
+    <div>Final</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
+
+
