@@ -42,6 +42,7 @@ import {
   recapToggleEdit,
   recapCastVote,
   recapContinue,
+  reopenRecapModal,
 } from './recap-modal.js';
 
 const BOTTOM_NAV_SCREENS = [
@@ -947,7 +948,7 @@ function exposeGlobals() {
     toggleReady, adminStart, adminStop, adminNext, adminReset, resultsNext,
     castVote, showReveal, hideReveal, copyInviteCode, sendChat, exportPdf, savePrediction,
     shareResults, logout: logoutUser, previewCreateCode, deleteLobbyById,
-    recapToggleEdit, recapCastVote, recapContinue,
+    recapToggleEdit, recapCastVote, recapContinue, reopenRecapModal,
   };
   Object.assign(window, fns);
 }

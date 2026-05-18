@@ -1,6 +1,7 @@
 import { SCORES, formatScore, scoreClass, getCountryByCode } from './utils.js';
 import { isRecapVoteEditAllowed, submitVoteForPerformance } from './lobby.js';
 import { getUserVote } from './vote-engine.js';
+import { getCurrentLobby, getCurrentUser } from './store.js';
 
 const dismissedRecapLobbyIds = new Set();
 let recapOpen = false;
@@ -167,6 +168,21 @@ export async function recapCastVote(btn) {
 
 export function recapContinue() {
   closeRecapModal(true);
+}
+
+/** Rouvre le récap depuis le bloc pronostic (même après fermeture). */
+export function reopenRecapModal() {
+  const lobby = getCurrentLobby();
+  const user = getCurrentUser();
+  if (!lobby || !user) return;
+
+  const n = lobby.performances?.length ?? 0;
+  const onLastOrDone =
+    lobby.status === 'finished' ||
+    (n > 0 && lobby.currentPerformanceIndex >= n - 1);
+  if (!onLastOrDone) return;
+
+  openRecapModal(lobby, user);
 }
 
 export function bindRecapModal() {

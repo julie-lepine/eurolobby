@@ -1634,6 +1634,18 @@ button.quick-btn {
   border: 1px solid rgba(255, 215, 64, 0.22);
   box-sizing: border-box;
 }
+.prediction-recap-btn {
+  width: 100%;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  font-size: 13px;
+  border-color: rgba(255, 215, 64, 0.35);
+  color: var(--gold);
+}
+.prediction-recap-btn:hover {
+  border-color: rgba(255, 215, 64, 0.55);
+  background: rgba(255, 215, 64, 0.08);
+}
 .prediction-title {
   font-family: var(--font-display);
   font-size: 16px;
