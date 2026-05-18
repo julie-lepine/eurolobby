@@ -37,6 +37,12 @@ import {
 } from './lobby.js';
 import { renderAll, renderReveal, renderCreatePreview, markChatScrollForce } from './render.js';
 import { exportLobbyPdf, readExportOptions } from './pdf-export.js';
+import {
+  bindRecapModal,
+  recapToggleEdit,
+  recapCastVote,
+  recapContinue,
+} from './recap-modal.js';
 
 const BOTTOM_NAV_SCREENS = [
   'screen-dashboard',
@@ -898,6 +904,7 @@ function bindConfirmModal() {
 
 function bindEvents() {
   bindConfirmModal();
+  bindRecapModal();
   bindDashboardActions();
   document.getElementById('chat-input')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendChat();
@@ -914,6 +921,9 @@ function bindEvents() {
   window.addEventListener('eurolobby:update', () => {
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => refresh(), 50);
+  });
+  window.addEventListener('eurolobby:recap-dismissed', () => {
+    refresh();
   });
 
   setInterval(() => {
@@ -937,6 +947,7 @@ function exposeGlobals() {
     toggleReady, adminStart, adminStop, adminNext, adminReset, resultsNext,
     castVote, showReveal, hideReveal, copyInviteCode, sendChat, exportPdf, savePrediction,
     shareResults, logout: logoutUser, previewCreateCode, deleteLobbyById,
+    recapToggleEdit, recapCastVote, recapContinue,
   };
   Object.assign(window, fns);
 }

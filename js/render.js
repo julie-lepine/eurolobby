@@ -29,6 +29,7 @@ import {
   computeUserWinner,
 } from './vote-engine.js';
 import { buildLobbyReportData } from './pdf-export.js';
+import { isRecapDismissed, maybeOpenRecapModal } from './recap-modal.js';
 
 let chatScrollForce = false;
 
@@ -460,10 +461,18 @@ export function renderResults(lobby, user) {
   const isLastPerformance =
     lobby.currentPerformanceIndex >= lobby.performances.length - 1;
   const showPrediction = isLastPerformance || lobby.status === 'finished';
+  const recapDone = isRecapDismissed(lobby.id);
   const predictionBlock = document.getElementById('prediction-block');
   const predictionInput = document.getElementById('prediction-input');
   if (predictionBlock) {
-    predictionBlock.style.display = showPrediction && user ? '' : 'none';
+    const showBlock =
+      showPrediction &&
+      user &&
+      (lobby.status === 'finished' || recapDone);
+    predictionBlock.style.display = showBlock ? '' : 'none';
+  }
+  if (showPrediction && user && isLastPerformance && lobby.status === 'live' && !recapDone) {
+    maybeOpenRecapModal(lobby, user);
   }
   if (predictionInput && user) {
     const saved = getUserPrediction(lobby, user.id);

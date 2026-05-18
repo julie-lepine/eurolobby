@@ -299,6 +299,55 @@ export async function resetLobby() {
   );
 }
 
+/** Dernière prestation, session encore live : fenêtre récap / correction des votes. */
+export function isRecapVoteEditAllowed(lobby) {
+  if (!lobby || lobby.status !== 'live') return false;
+  const n = lobby.performances?.length ?? 0;
+  if (n === 0) return false;
+  return lobby.currentPerformanceIndex >= n - 1;
+}
+
+export async function submitVoteForPerformance(performanceId, score) {
+  const session = getSession();
+  const user = getCurrentUser();
+  if (!session?.lobbyId || !user) return { ok: false, error: 'Non connecté.' };
+
+  if (isRemoteMode()) {
+    const hydrated = await ensureLobbyCache(session.lobbyId);
+    if (!hydrated) return { ok: false, error: 'Lobby introuvable. Rejoins la partie.' };
+  }
+
+  const lobby = getCurrentLobby();
+  if (!isRecapVoteEditAllowed(lobby)) {
+    return { ok: false, error: 'Les votes ne peuvent plus être modifiés.' };
+  }
+
+  const perf = lobby.performances.find((p) => p.id === performanceId);
+  if (!perf) return { ok: false, error: 'Prestation introuvable.' };
+
+  const updated = await updateLobby(
+    session.lobbyId,
+    (l) => {
+      if (!l) return l;
+      const votes = l.votes.filter(
+        (v) => !(v.performanceId === performanceId && v.userId === user.id)
+      );
+      votes.push({
+        id: uid(),
+        performanceId,
+        userId: user.id,
+        score,
+        createdAt: Date.now(),
+      });
+      return { ...l, votes };
+    },
+    persistOpts()
+  );
+  return updated
+    ? { ok: true, lobby: updated }
+    : { ok: false, error: isRemoteMode() ? 'Erreur de synchronisation du vote.' : 'Erreur vote.' };
+}
+
 export async function submitVote(score) {
   const session = getSession();
   const user = getCurrentUser();
